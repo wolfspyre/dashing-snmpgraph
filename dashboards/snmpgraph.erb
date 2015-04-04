@@ -1,0 +1,33 @@
+<script type='text/javascript'>
+$(function() {
+  Dashing.gridsterLayout('[{"col":3,"row":2,"size_x":1,"size_y":1},{"col":1,"row":2,"size_x":2,"size_y":2},{"col":4,"row":1,"size_x":2,"size_y":1},{"col":4,"row":3,"size_x":2,"size_y":1},{"col":4,"row":2,"size_x":2,"size_y":1},{"col":1,"row":1,"size_x":2,"size_y":1},{"col":3,"row":3,"size_x":2,"size_y":1}]')
+  Dashing.widget_base_dimensions = [370, 340]
+  Dashing.numColumns = 5
+});</script>
+<% content_for :title do %>Snmpgraph Dashboard<% end %>
+
+<div class="gridster">
+  <ul>
+    <li data-row="1" data-col="1" data-sizex="1" data-sizey="1">
+      <div data-view="Image" data-image="/logo.png"></div>
+    </li>
+    <li data-row="1" data-col="1" data-sizex="2" data-sizey="1">
+        <div data-id="snmpgraph_0" data-title="graph0" data-view="snmpgraph0"></div>
+    </li>
+    <li data-row="1" data-col="1" data-sizex="2" data-sizey="1">
+        <div data-id="snmpgraph_1" data-title="graph1" data-renderer="line" data-legend="true" data-summary-method="last" data-color-scheme="default" data-view="Rickshawgraph"></div>
+    </li>
+    <li data-row="1" data-col="1" data-sizex="2" data-sizey="1">
+        <div data-id="snmpgraph_2" data-title="graph2" data-renderer="line" data-legend="true" data-summary-method="last" data-color-scheme="default" data-view="Rickshawgraph"></div>
+    </li>
+    <li data-row="1" data-col="1" data-sizex="2" data-sizey="1">
+        <div data-id="snmpgraph_3" data-title="graph3" data-renderer="line" data-legend="true" data-summary-method="last" data-color-scheme="default" data-view="Rickshawgraph"></div>
+    </li>
+    <li data-row="1" data-col="1" data-sizex="2" data-sizey="1">
+        <div data-id="snmpgraph_4" data-title="graph4" data-renderer="line" data-legend="true" data-summary-method="last" data-color-scheme="default" data-view="Rickshawgraph"></div>
+    </li>
+    <li data-row="1" data-col="1" data-sizex="2" data-sizey="1">
+        <div data-id="snmpgraph_5" data-title="graph5" data-renderer="line" data-legend="true" data-summary-method="last" data-color-scheme="default" data-view="Rickshawgraph"></div>
+    </li>
+  </ul>
+</div>

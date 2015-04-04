@@ -1,0 +1,14 @@
+## snmpgraph-defaults.yaml #####################################################
+polling_options:
+  frequency: 10
+graph_options:
+  data-displayed-value: undef
+  data-renderer: 'area'
+  data-stroke: true
+  data-unstack: true
+  data-color-scheme: 'default'
+  data-legend: true
+  data-min: undef
+  data-max: undef
+  data-summary-method: 'highest'
+graphs: []

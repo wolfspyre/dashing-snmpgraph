@@ -1,0 +1,30 @@
+## example_snmpgraph_interfaces.yaml ###########################################
+dashboard0:
+    - name: 'example_graph_0'
+      address: '1.2.3.4'
+      community: 'snmp_community'
+      connection: 'v2c'
+      depth: 100
+      entities:
+        graph_element_0:
+          oid: '1.3.6.1.2.1.2.2.1.10.1'
+          color: undef
+          invert: false
+        graph_element_0:
+          oid: '1.3.6.1.2.1.2.2.1.16.1'
+          color: undef
+          invert: false
+    - name: 'example_graph_1'
+      address: '1.2.3.5'
+      community: 'snmp_community'
+      connection: 'v2c'
+      depth: 100
+      entities:
+        graph_element_0:
+          oid: '1.3.6.1.2.1.2.2.1.10.1'
+          color: undef
+          invert: false
+        graph_element_0:
+          oid: '1.3.6.1.2.1.2.2.1.10.1'
+          color: undef
+          invert: false
