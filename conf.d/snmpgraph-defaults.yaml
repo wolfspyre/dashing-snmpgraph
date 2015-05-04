@@ -1,6 +1,6 @@
 ## snmpgraph-defaults.yaml #####################################################
 polling_options:
-  frequency: 10
+  interval: 10
 graph_options:
   data-displayed-value: undef
   data-renderer: 'area'
@@ -12,3 +12,7 @@ graph_options:
   data-max: undef
   data-summary-method: 'highest'
 graphs: []
+history:
+  enable: true
+  file: 'history/snmpgraph_history.yaml'
+  write_frequency: 60

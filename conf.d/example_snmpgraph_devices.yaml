@@ -1,4 +1,4 @@
-## example_snmpgraph_interfaces.yaml ###########################################
+## example_snmpgraph_devices.yaml ##############################################
 dashboard0:
     - name: 'example_graph_0'
       address: '1.2.3.4'
