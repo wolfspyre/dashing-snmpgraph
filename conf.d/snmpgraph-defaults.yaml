@@ -1,6 +1,6 @@
 ## snmpgraph-defaults.yaml #####################################################
 polling_options:
-  interval: 10
+  interval: 60
 graph_options:
   data-displayed-value: undef
   data-renderer: 'area'

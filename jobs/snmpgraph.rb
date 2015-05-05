@@ -24,22 +24,26 @@ Dir[File.join(SNMPGRAPH_CONFIG_DIR, "snmpgraph_*.yaml")].each do |graph_file|
   graph_data['graphs'] << YAML.load_file(graph_file)
 end
 @snmpgraph_depth_max=99
+#TODO: this should be a per graph tunable
+@snmpgraph_graph_depth=99
 @snmpgraph_poll_interval=graph_data['polling_options']['interval']
 @snmpgraph_history_file=graph_data['history']['file']
 @snmpgraph_history_enable=graph_data['history']['enable']
 @snmpgraph_history_frequency=graph_data['history']['write_frequency']
-warn "SNMPGraph: Graph Datafile: #{SNMPGRAPH_GRAPH_DATA_FILE}"
-warn "SNMPGRAPH: Graph data: #{graph_data}"
-warn "SNMPGraph: Poll interval: #{@snmpgraph_poll_interval}"
-warn "SNMPGraph: History file: #{@snmpgraph_history_file}"
-warn "SNMPGraph: History enable: #{@snmpgraph_history_enable}"
-warn "SNMPGraph: History frequency: #{@snmpgraph_history_frequency}"
+#warn "SNMPGraph: Graph Datafile: #{SNMPGRAPH_GRAPH_DATA_FILE}"
+#warn "SNMPGRAPH: Graph data: #{graph_data}"
+#warn "SNMPGraph: Poll interval: #{@snmpgraph_poll_interval}"
+#warn "SNMPGraph: History file: #{@snmpgraph_history_file}"
+#warn "SNMPGraph: History enable: #{@snmpgraph_history_enable}"
+#warn "SNMPGraph: History frequency: #{@snmpgraph_history_frequency}"
+#warn "SNMPGraph: Graph Depth: #{@snmpgraph_graph_depth}"
+
 if @snmpgraph_history_enable
   warn   "SnmpGraph: History enabled"
   snmpGraphHistoryFile=@snmpgraph_history_file
   if File.exists?(snmpGraphHistoryFile)
     warn   "SnmpGraph: History file exists"
-    snmpgraph_history = YAML.load_file(snmpGraphHistoryFile)
+    snmpGraph_history = YAML.load_file(snmpGraphHistoryFile)
   else
     warn   "SnmpGraph: New history file initialized"
     snmpGraph_history=Hash.new
@@ -51,72 +55,90 @@ if @snmpgraph_history_enable
   end
 end
 graph_data['graphs'].each do |data_view|
-  warn "SNMPGraph: Data View: #{data_view}"
+  #warn "SNMPGraph: Data View: #{data_view}"
   #iterate through each top element of the graphs array. Each element should
   #have a slew of graphs for which to poll a collection of snmp devices
   if data_view.is_a?(Hash)
-    warn "SNMPGraph: data_view is a Hash"
+    #warn "SNMPGraph: data_view is a Hash"
     _view=data_view[0]
     data_view.each do |data_view_iterator|
       if data_view_iterator.is_a?(Array)
-        warn "SNMPGraph: data_view_iterator is an Array"
+        #warn "SNMPGraph: data_view_iterator is an Array"
         data_view_iterator.each do |data_view_graph|
-          warn "SNMPGraph: data_view_graph: #{data_view_graph}"
+          #warn "SNMPGraph: data_view_graph: #{data_view_graph}"
           if data_view_graph.is_a?(Array)
-            warn "SNMPGraph: data_view_graph is an array"
+            #warn "SNMPGraph: data_view_graph is an array"
             #this should be the data which should be used to generate one specific
             #graph. This should correspond to the 'example_graph_0' entity in the
             #example file
             data_view_graph.each do |this_graph|
-              warn "SNMPGraph: this_graph: #{this_graph}"
+              #warn "SNMPGraph: this_graph: #{this_graph}"
               if this_graph.is_a?(Hash)
-                warn "SNMPGraph: this_graph is a Hash."
+                #warn "SNMPGraph: this_graph is a Hash."
+                #warn "SNMPGraph: this_graph: #{this_graph}"
                 #this should be the graph elements
                 #create the SNMP request
                 this_graph['entities'].each do |polled_entity|
+                  #warn "SNMPGraph: polled_entity: #{polled_entity}"
                   _name = polled_entity[0]
-                  _oid  = polled_entity['oid']
+                  _oid  = polled_entity[1]['oid'].to_i
                   #fetch or initialize the time series array
                   if @snmpgraph_history_enable
-                    if snmpGraph_history["#{_name}_#{_oid}_datapoints"] && !snmpGraph_history["#{_name}_#{_oid}_datapoints"].empty?
-                      warn "SnmpGraph: History enabled. Populating "#{_name}_#{_oid}_datapoints" from file."
-                      instance_variable_set("@#{_name}_#{_oid}_datapoints", snmpGraph_history["#{_name}_#{_oid}_datapoints"])
+                    if snmpGraph_history["#{this_graph['name']}_#{_name}_datapoints"] && !snmpGraph_history["#{this_graph['name']}_#{_name}_datapoints"].empty?
+                      #warn "SnmpGraph: History enabled. Populating #{this_graph['name']}_#{_name}_datapoints from file."
+                      instance_variable_set("@#{this_graph['name']}_#{_name}_datapoints", snmpGraph_history["#{this_graph['name']}_#{_name}_datapoints"])
                     else
-                      warn "SnmpGraph: History enabled but #{_name}_#{_oid}_datapoints nonexistent or empty. Creating"
-                      instance_variable_set("@#{_name}_#{_oid}_datapoints", Array.new)
-                      snmpGraph_history["#{_name}_#{_oid}_datapoints"]=Array.new
+                      warn "SnmpGraph: History enabled but #{this_graph['name']}_#{_name}_datapoints nonexistent or empty. Creating"
+                      instance_variable_set("@#{this_graph['name']}_#{_name}_datapoints", Array.new)
+                      snmpGraph_history["#{this_graph['name']}_#{_name}_datapoints"]=Array.new
                     end
                   else
-                    #warn "SnmpGraph: History disabled. Initializing #{_name}_#{_oid}_datapoints data"
-                    instance_variable_set("@#{_name}_#{_oid}_datapoints", Array.new)
+                    #warn "SnmpGraph: History disabled. Initializing #{this_graph['name']}_#{_name}_datapoints data"
+                    instance_variable_set("@#{this_graph['name']}_#{_name}_datapoints", Array.new)
                   end
                 end
                 SCHEDULER.every "#{@snmpgraph_poll_interval}s", first_in: 0 do
                   #create the job
-                  warn "SNMPGraph: Starting"
+                  #warn "SNMPGraph: Starting job for #{this_graph['name']}"
                   job_graphite = []
                   this_graph['entities'].each do |polled_entity|
-                    warn "SNMPGraph: #{polled_entitiy}"
+                    #warn "SNMPGraph: #{this_graph['name']}: #{polled_entity[0]}"
                     manager = SNMP::Manager.new(:host => this_graph['address'], :community => this_graph['community'])
                     _name   = polled_entity[0]
-                    _oid    = polled_entity['oid']
+                    _oid    = polled_entity[1]['oid']
                     _data   = manager.get_value(_oid).to_i
                     now     = Time.now.to_i
                     job_now = [_data,now]
-                    warn "SNMPGraph: #{_now} Name: #{_name} OID: #{_oid} Value: #{_data}"
-                    _foo = instance_variable_get("@#{_name}_#{_oid}_datapoints")
+                    #warn "SNMPGraph: #{this_graph['name']}: #{now} Name: #{_name} OID: #{_oid} Value: #{_data} job_now: #{job_now} "
+                    _foo = instance_variable_get("@#{this_graph['name']}_#{_name}_datapoints")
+                    #warn "SNMPGraph: #{this_graph['name']}: #{this_graph['name']}_#{_name} _foo set: #{_foo}"
+                    if _foo.length >= @snmpgraph_graph_depth.to_i
+                      #warn "SNMPGraph: #{this_graph['name']}_#{_name}_datapoints: graph_depth reached (#{_foo.length}). Dropping"
+                      _foo = _foo.drop(_foo.length - @snmpgraph_graph_depth.to_i + 1)
+                      #warn "SNMPGraph: #{this_graph['name']}_#{_name}_datapoints: graph_depth now (#{_foo.length})."
+                    end
                     _foo << job_now
-                    instance_variable_set("@#{_name}_#{_oid}_datapoints", _foo)
+                    #warn "SNMPGraph: #{this_graph['name']}: #{this_graph['name']}_#{_name} _foo appended: #{_foo}"
+                    instance_variable_set("@#{this_graph['name']}_#{_name}_datapoints", _foo)
+                    _bar = instance_variable_get("@#{this_graph['name']}_#{_name}_datapoints")
+                    #warn "SNMPGraph: #{this_graph['name']}: #{this_graph['name']}_#{_name} _bar now: #{_bar}"
+                    #warn "SNMPGraph: #{this_graph['name']}: #{this_graph['name']}_#{_name} _bar now: #{_bar.length} deep"
                     _entity_hash = Hash.new
                     _entity_hash['target'] = _name
                     _entity_hash['datapoints'] = _foo
                     job_graphite << _entity_hash
+                    if @snmpgraph_history_enable
+                      #warn "SNMPGraph: History enabled. appending to #{this_graph['name']}_#{_name}_datapoints object"
+                      snmpGraph_history["#{this_graph['name']}_#{_name}_datapoints"] << job_now
+                    end
                   end#polled entity for this job
+                  #warn "SNMPGraph: job_graphite: #{this_graph['name']}  #{job_graphite}"
+                  send_event(this_graph['name'], series: job_graphite )
                 end#this graph job
               end
             end#this_graph iterator
-          else
-            warn "SNMPGraph: data_view_iterator is not an Array"
+          #else
+          #  warn "SNMPGraph: data_view_iterator is not an Array"
           end#data_view_iterator array
         end#data_view iterator
       end#data_view
@@ -129,7 +151,7 @@ SCHEDULER.every "#{@snmpgraph_history_frequency}s", first_in: 0 do
     snmpGraph_history.each_pair do |k,v|
       if v.length >= @snmpgraph_graph_depth.to_i
 #        warn "SnmpGraph: History depth: #{k}: #{v.length} Trimming"
-        snmpGraph_history[k]= v.drop(1)
+        snmpGraph_history[k]= v.drop(v.length - @snmpgraph_graph_depth.to_i + 1)
 #        warn "SnmpGraph: History depth: now #{octoprint_history[k].length}"
       else
 #        warn "SnmpGraph: History depth: #{k}: #{v.length} "
