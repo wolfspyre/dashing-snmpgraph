@@ -54,8 +54,8 @@ graph_data['graphs'].each do |data_view|
   warn "SNMPGraph: Data View: #{data_view}"
   #iterate through each top element of the graphs array. Each element should
   #have a slew of graphs for which to poll a collection of snmp devices
-  if data_view.is_a?(Array)
-    warn "SNMPGraph: data_view is an array"
+  if data_view.is_a?(Hash)
+    warn "SNMPGraph: data_view is a Hash"
     _view=data_view[0]
     data_view.each do |data_view_graph|
       warn "SNMPGraph: data_view_graph: #{data_view_graph}"
