@@ -6,13 +6,13 @@ require 'pry'
 ##############################################
 # Load configuration
 ##############################################
-CONFIG_DIR = File.join(File.expand_path('..'), "conf.d")
+SNMPGRAPH_CONFIG_DIR = File.join(File.expand_path('..'), "conf.d")
 # should get inserted into graph_data by loading
-#CONFIG_MAIN_FILE = File.join(CONFIG_DIR, "snmpgraph_devices.yaml")
-GRAPH_DATA_FILE  = File.join(CONFIG_DIR, "snmpgraph-defaults.yaml")
-#CONFIG_OVERRIDE_FILE = File.join(CONFIG_DIR, "snmp_interfaces_override.yaml")
+#CONFIG_MAIN_FILE = File.join(SNMPGRAPH_CONFIG_DIR, "snmpgraph_devices.yaml")
+SNMPGRAPH_GRAPH_DATA_FILE  = File.join(SNMPGRAPH_CONFIG_DIR, "snmpgraph-defaults.yaml")
+#CONFIG_OVERRIDE_FILE = File.join(SNMPGRAPH_CONFIG_DIR, "snmp_interfaces_override.yaml")
 #snmp_config = YAML.load_file(CONFIG_MAIN_FILE)
-graph_data = YAML.load_file(GRAPH_DATA_FILE)
+graph_data = YAML.load_file(SNMPGRAPH_GRAPH_DATA_FILE)
 #if File.exists?(CONFIG_OVERRIDE_FILE)
 #  snmp_config = snmp_config.merge(YAML.load_file(CONFIG_OVERRIDE_FILE))
 #end
@@ -20,7 +20,7 @@ graph_data = YAML.load_file(GRAPH_DATA_FILE)
 #
 #shove all the files containing things to graph into a single element for
 #iteration. TODO: should we do this differently?
-Dir[File.join(CONFIG_DIR, "snmpgraph_*.yaml")].each do |graph_file|
+Dir[File.join(SNMPGRAPH_CONFIG_DIR, "snmpgraph_*.yaml")].each do |graph_file|
   graph_data['graphs'] << YAML.load_file(graph_file)
 end
 @snmpgraph_depth_max=99
