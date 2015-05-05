@@ -78,14 +78,17 @@ graph_data['graphs'].each do |data_view|
             end
             SCHEDULER.every "#{@snmpgraph_poll_interval}s", first_in: 0 do
               #create the job
+              warn "SNMPGraph: Starting"
               job_graphite = []
               this_graph['entities'].each do |polled_entity|
+                warn "SNMPGraph: #{polled_entitiy}"
                 manager = SNMP::Manager.new(:host => this_graph['address'], :community => this_graph['community'])
                 _name   = polled_entity[0]
                 _oid    = polled_entity['oid']
                 _data   = manager.get_value(_oid).to_i
                 now     = Time.now.to_i
                 job_now = [_data,now]
+                warn "SNMPGraph: #{_now} Name: #{_name} OID: #{_oid} Value: #{_data}"
                 _foo = instance_variable_get("@#{_name}_#{_oid}_datapoints")
                 _foo << job_now
                 instance_variable_set("@#{_name}_#{_oid}_datapoints", _foo)
