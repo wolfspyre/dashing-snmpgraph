@@ -51,17 +51,23 @@ if @snmpgraph_history_enable
   end
 end
 graph_data['graphs'].each do |data_view|
+  warn "SNMPGraph: Data View: #{data_view}"
   #iterate through each top element of the graphs array. Each element should
   #have a slew of graphs for which to poll a collection of snmp devices
   if data_view.is_a?(Array)
+    warn "SNMPGraph: data_view is an array"
     _view=data_view[0]
     data_view.each do |data_view_graph|
+      warn "SNMPGraph: data_view_graph: #{data_view_graph}"
       if data_view_graph.is_a?(Array)
+        warn "SNMPGraph: data_view_graph is an array"
         #this should be the data which should be used to generate one specific
         #graph. This should correspond to the 'example_graph_0' entity in the
         #example file
         data_view_graph.each do |this_graph|
+          warn "SNMPGraph: this_graph: #{this_graph}"
           if this_graph.is_a?(Hash)
+            warn "SNMPGraph: this_graph is a Hash."
             #this should be the graph elements
             #create the SNMP request
             this_graph['entities'].each do |polled_entity|
