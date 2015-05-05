@@ -23,14 +23,14 @@ graph_data = YAML.load_file(GRAPH_DATA_FILE)
 Dir[File.join(CONFIG_DIR, "snmpgraph_*.yaml")].each do |graph_file|
   graph_data['graphs'] << YAML.load_file(graph_file)
 end
-@graph_depth_max=99
-@poll_interval=graph_data['polling_options']['interval']
-@history_file=graph_data['history']['file']
-@history_enable=graph_data['history']['enable']
-@history_frequency=graph_data['history']['write_frequency']
-if @history_enable
+@snmpgraph_depth_max=99
+@snmpgraph_poll_interval=graph_data['polling_options']['interval']
+@snmpgraph_history_file=graph_data['history']['file']
+@snmpgraph_history_enable=graph_data['history']['enable']
+@snmpgraph_history_frequency=graph_data['history']['write_frequency']
+if @snmpgraph_history_enable
   warn   "SnmpGraph: History enabled"
-  snmpGraphHistoryFile=@history_file
+  snmpGraphHistoryFile=@snmpgraph_history_file
   if File.exists?(snmpGraphHistoryFile)
     warn   "SnmpGraph: History file exists"
     snmpgraph_history = YAML.load_file(snmpGraphHistoryFile)
@@ -62,7 +62,7 @@ graph_data['graphs'].each do |data_view|
               _name = polled_entity[0]
               _oid  = polled_entity['oid']
               #fetch or initialize the time series array
-              if @history_enable
+              if @snmpgraph_history_enable
                 if snmpGraph_history["#{_name}_#{_oid}_datapoints"] && !snmpGraph_history["#{_name}_#{_oid}_datapoints"].empty?
                   warn "SnmpGraph: History enabled. Populating "#{_name}_#{_oid}_datapoints" from file."
                   instance_variable_set("@#{_name}_#{_oid}_datapoints", snmpGraph_history["#{_name}_#{_oid}_datapoints"])
@@ -76,7 +76,7 @@ graph_data['graphs'].each do |data_view|
                 instance_variable_set("@#{_name}_#{_oid}_datapoints", Array.new)
               end
             end
-            SCHEDULER.every "#{@poll_interval}s", first_in: 0 do
+            SCHEDULER.every "#{@snmpgraph_poll_interval}s", first_in: 0 do
               #create the job
               job_graphite = []
               this_graph['entities'].each do |polled_entity|
@@ -101,11 +101,11 @@ graph_data['graphs'].each do |data_view|
     end#dashboard entity
   end#dashboard array iterator
 end#graph_data['graphs'] iterator
-SCHEDULER.every "#{@history_frequency}s", first_in: 0 do
-  if @history_enable
+SCHEDULER.every "#{@snmpgraph_history_frequency}s", first_in: 0 do
+  if @snmpgraph_history_enable
 #    warn "SnmpGraph: History Job enabled"
     snmpGraph_history.each_pair do |k,v|
-      if v.length >= @graph_depth.to_i
+      if v.length >= @snmpgraph_graph_depth.to_i
 #        warn "SnmpGraph: History depth: #{k}: #{v.length} Trimming"
         snmpGraph_history[k]= v.drop(1)
 #        warn "SnmpGraph: History depth: now #{octoprint_history[k].length}"
@@ -114,8 +114,8 @@ SCHEDULER.every "#{@history_frequency}s", first_in: 0 do
       end
     end
 #      warn "SnmpGraph: History job Writing #{snmpGraph_history} to #{@history_file}"
-    warn "SnmpGraph: History job Writing to #{@history_file}"
-    File.open(@history_file, 'w'){|f|
+    warn "SnmpGraph: History job Writing to #{@snmpgraph_history_file}"
+    File.open(@snmpgraph_history_file, 'w'){|f|
       f.write snmpGraph_history.to_yaml
     }
   else
