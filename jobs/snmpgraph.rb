@@ -28,6 +28,8 @@ end
 @snmpgraph_history_file=graph_data['history']['file']
 @snmpgraph_history_enable=graph_data['history']['enable']
 @snmpgraph_history_frequency=graph_data['history']['write_frequency']
+warn "SNMPGraph: Graph Datafile: #{SNMPGRAPH_GRAPH_DATA_FILE}"
+warn "SNMPGRAPH: Graph data: #{graph_data}"
 warn "SNMPGraph: Poll interval: #{@snmpgraph_poll_interval}"
 warn "SNMPGraph: History file: #{@snmpgraph_history_file}"
 warn "SNMPGraph: History enable: #{@snmpgraph_history_enable}"
