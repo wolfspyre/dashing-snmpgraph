@@ -38,6 +38,30 @@ end
 #warn "SNMPGraph: History frequency: #{@snmpgraph_history_frequency}"
 #warn "SNMPGraph: Graph Depth: #{@snmpgraph_graph_depth}"
 
+def octetsToXps(last_octet_count,last_unixtime,current_octet_count,current_unixtime,output='mbps')
+  if last_unixtime == current_unixtime
+    xps_out = 0
+  else
+    octets  = current_octet_count - last_octet_count
+    seconds = current_unixtime - last_unixtime
+    #octets (bytes) -> bits
+    bits = octets * 8
+    bps = bits / seconds
+    case output
+      #http://www.matisse.net/bitcalc/
+    when 'mbps'
+      xps = (bps/1048576)
+      xps_out = xps.to_f
+    else
+      #assume mbps
+      xps = (bps/1048576)
+      xps_out= xps.to_f
+    end
+  end
+#  warn "SNMPGraph: #{octets} #{bits} #{seconds} #{bps} #{xps_out}"
+ xps_out
+end
+
 if @snmpgraph_history_enable
   warn   "SnmpGraph: History enabled"
   snmpGraphHistoryFile=@snmpgraph_history_file
@@ -103,11 +127,46 @@ graph_data['graphs'].each do |data_view|
                   job_graphite = []
                   this_graph['entities'].each do |polled_entity|
                     #warn "SNMPGraph: #{this_graph['name']}: #{polled_entity[0]}"
-                    manager = SNMP::Manager.new(:host => this_graph['address'], :community => this_graph['community'])
-                    _name   = polled_entity[0]
-                    _oid    = polled_entity[1]['oid']
-                    _data   = manager.get_value(_oid).to_i
-                    now     = Time.now.to_i
+                    manager  = SNMP::Manager.new(:host => this_graph['address'], :community => this_graph['community'])
+                    _name    = polled_entity[0]
+                    _oid     = polled_entity[1]['oid']
+                    _rawdata = manager.get_value(_oid).to_i
+                    now      = Time.now.to_i
+                    if polled_entity[1]
+                      mode   = polled_entity[1]['mode']
+                    else
+                      mode   = 'default'
+                    end
+                    #store and convert if necessary for the mode and item.
+                    case mode
+                    when 'octets_to_Mbps'
+                      #we need to fetch the last timeseries data so that we can
+                      #calculate Mbps from octets
+                      if instance_variable_defined?("@#{this_graph['name']}_#{_name}_last")
+                        last = instance_variable_get("@#{this_graph['name']}_#{_name}_last")
+                        olddata = instance_variable_get("@#{this_graph['name']}_#{_name}_datapoints")
+                        if !olddata.empty? && olddata.last[1]
+                          lasttime = olddata.last[1]
+                        else
+                          #warn "SnmpGraph: #{this_graph['name']}_#{_name}: Couldn't fetch lasttime. using #{now}"
+                          lasttime = now
+                        end
+                        #warn "SnmpGraph: Setting #{this_graph['name']}_#{_name}_last to #{_rawdata}. Was #{last}"
+                        instance_variable_set("@#{this_graph['name']}_#{_name}_last", _rawdata)
+                      else
+                        #warn "SnmpGraph: #{this_graph['name']}_#{_name}: #{this_graph['name']}_#{_name}_last not set. Setting this datapoint to current"
+                        instance_variable_set("@#{this_graph['name']}_#{_name}_last", _rawdata)
+                        last = _rawdata
+                        lasttime = now
+                      end
+                      #warn "SnmpGraph: #{this_graph['name']}_#{_name}: Last: #{last} LastTime: #{lasttime} Current: #{_rawdata}, now: #{now}"
+                      _data = octetsToXps(last,lasttime,_rawdata,now,'mbps')
+                    when 'default'
+                      _data = _rawdata
+                    else
+                      _data = _rawdata
+                    end
+                    #warn "SnmpGraph: #{this_graph['name']}_#{_name}: Current: #{_data}, now: #{now}"
                     job_now = [_data,now]
                     #warn "SNMPGraph: #{this_graph['name']}: #{now} Name: #{_name} OID: #{_oid} Value: #{_data} job_now: #{job_now} "
                     _foo = instance_variable_get("@#{this_graph['name']}_#{_name}_datapoints")
