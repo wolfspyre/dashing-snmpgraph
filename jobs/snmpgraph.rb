@@ -49,14 +49,20 @@ def octetsToXps(last_octet_count,last_unixtime,current_octet_count,current_unixt
     bps = bits / seconds
     case output
       #http://www.matisse.net/bitcalc/
+    when 'bps'
+      xps_out = bps.to_i
+    when 'kbps'
+      xps = (bps/1024)
+      xps_out = xps.to_i
     when 'mbps'
-      xps = (bps/1048576)
-      xps_out = xps.to_f
+      xps = (bps/1024000)
+      xps_out = xps.to_i
     else
       #assume mbps
-      xps = (bps/1048576)
-      xps_out= xps.to_f
+      xps = (bps/1024000)
+      xps_out= xps.to_i
     end
+    warn "SNMPGraph octetsToXps: octets: #{octets} seconds: #{seconds} bits: #{bits} bps: #{bps} #{output}: #{xps_out}"
   end
 #  warn "SNMPGraph: #{octets} #{bits} #{seconds} #{bps} #{xps_out}"
  xps_out
@@ -104,95 +110,161 @@ graph_data['graphs'].each do |data_view|
                 #create the SNMP request
                 this_graph['entities'].each do |polled_entity|
                   #warn "SNMPGraph: polled_entity: #{polled_entity}"
-                  _name = polled_entity[0]
-                  _oid  = polled_entity[1]['oid'].to_i
-                  #fetch or initialize the time series array
-                  if @snmpgraph_history_enable
-                    if snmpGraph_history["#{this_graph['name']}_#{_name}_datapoints"] && !snmpGraph_history["#{this_graph['name']}_#{_name}_datapoints"].empty?
-                      #warn "SnmpGraph: History enabled. Populating #{this_graph['name']}_#{_name}_datapoints from file."
-                      instance_variable_set("@#{this_graph['name']}_#{_name}_datapoints", snmpGraph_history["#{this_graph['name']}_#{_name}_datapoints"])
-                    else
-                      warn "SnmpGraph: History enabled but #{this_graph['name']}_#{_name}_datapoints nonexistent or empty. Creating"
-                      instance_variable_set("@#{this_graph['name']}_#{_name}_datapoints", Array.new)
-                      snmpGraph_history["#{this_graph['name']}_#{_name}_datapoints"]=Array.new
-                    end
+                  if !polled_entity[1]['oid']
+                    warn "SNMPGraph: #{polled_entity[0]} Skipping. no OID found."
                   else
-                    #warn "SnmpGraph: History disabled. Initializing #{this_graph['name']}_#{_name}_datapoints data"
-                    instance_variable_set("@#{this_graph['name']}_#{_name}_datapoints", Array.new)
+                    _name = polled_entity[0]
+                    _oid  = polled_entity[1]['oid'].to_i
+                    #fetch or initialize the time series array
+                    if @snmpgraph_history_enable
+                      if snmpGraph_history["#{this_graph['name']}_#{_name}_datapoints"] && !snmpGraph_history["#{this_graph['name']}_#{_name}_datapoints"].empty?
+                        #warn "SnmpGraph: History enabled. Populating #{this_graph['name']}_#{_name}_datapoints from file."
+                        instance_variable_set("@#{this_graph['name']}_#{_name}_datapoints", snmpGraph_history["#{this_graph['name']}_#{_name}_datapoints"])
+                      else
+                        warn "SnmpGraph: History enabled but #{this_graph['name']}_#{_name}_datapoints nonexistent or empty. Creating"
+                        instance_variable_set("@#{this_graph['name']}_#{_name}_datapoints", Array.new)
+                        snmpGraph_history["#{this_graph['name']}_#{_name}_datapoints"]=Array.new
+                      end
+                    else
+                      #warn "SnmpGraph: History disabled. Initializing #{this_graph['name']}_#{_name}_datapoints data"
+                      instance_variable_set("@#{this_graph['name']}_#{_name}_datapoints", Array.new)
+                    end
                   end
                 end
                 SCHEDULER.every "#{@snmpgraph_poll_interval}s", first_in: 0 do
                   #create the job
                   #warn "SNMPGraph: Starting job for #{this_graph['name']}"
                   job_graphite = []
+                  lowest   = 0
+                  now      = Time.now.to_i
                   this_graph['entities'].each do |polled_entity|
-                    #warn "SNMPGraph: #{this_graph['name']}: #{polled_entity[0]}"
-                    manager  = SNMP::Manager.new(:host => this_graph['address'], :community => this_graph['community'])
-                    _name    = polled_entity[0]
-                    _oid     = polled_entity[1]['oid']
-                    _rawdata = manager.get_value(_oid).to_i
-                    now      = Time.now.to_i
-                    if polled_entity[1]
-                      mode   = polled_entity[1]['mode']
+                    if !polled_entity[1]['oid']
+                      warn "SNMPGraph: #{this_graph['name']}: #{polled_entity[0]} Skipping. no OID found."
                     else
-                      mode   = 'default'
-                    end
-                    #store and convert if necessary for the mode and item.
-                    case mode
-                    when 'octets_to_Mbps'
-                      #we need to fetch the last timeseries data so that we can
-                      #calculate Mbps from octets
-                      if instance_variable_defined?("@#{this_graph['name']}_#{_name}_last")
-                        last = instance_variable_get("@#{this_graph['name']}_#{_name}_last")
-                        olddata = instance_variable_get("@#{this_graph['name']}_#{_name}_datapoints")
-                        if !olddata.empty? && olddata.last[1]
-                          lasttime = olddata.last[1]
+                      #warn "SNMPGraph: #{this_graph['name']}: #{polled_entity[0]}"
+                      manager  = SNMP::Manager.new(:host => this_graph['address'], :community => this_graph['community'])
+                      _name    = polled_entity[0]
+                      _oid     = polled_entity[1]['oid']
+                      #TODO: work with jwalton to get this supported.
+                      #if polled_entity[1]['renderer']
+                      #  _renderer = polled_entity[1]['renderer']
+                      #else
+                      #  #todo set default dynamically
+                      #  _renderer = 'area'
+                      #end
+                      if polled_entity[1]['color']
+                        #TODO: implement me
+                        _color = polled_entity[1]['color']
+                      else
+                        _color = 'somedefault'
+                      end
+                      _rawdata = manager.get_value(_oid).to_i
+                      if polled_entity[1]
+                        mode   = polled_entity[1]['mode']
+                      else
+                        mode   = 'default'
+                      end
+                      #store and convert if necessary for the mode and item.
+                      case mode
+                      when 'octets_to_Mbps', 'octets_to_Kbps', 'octets_to_bps'
+                        case mode
+                        when 'octets_to_Mbps'
+                          _output='mbps'
+                        when 'octets_to_Kbps'
+                          _output='kbps'
+                        when 'octets_to_bps'
+                          _output=bps
+                        end
+                        #we need to fetch the last timeseries data so that we can
+                        #calculate Mbps from octets
+                        if instance_variable_defined?("@#{this_graph['name']}_#{_name}_last")
+                          last = instance_variable_get("@#{this_graph['name']}_#{_name}_last")
+                          olddata = instance_variable_get("@#{this_graph['name']}_#{_name}_datapoints")
+                          if !olddata.empty? && olddata.last[1]
+                            lasttime = olddata.last[1]
+                          else
+                            #warn "SnmpGraph: #{this_graph['name']}_#{_name}: Couldn't fetch lasttime. using #{now}"
+                            lasttime = now
+                          end
+                          #warn "SnmpGraph: Setting #{this_graph['name']}_#{_name}_last to #{_rawdata}. Was #{last}"
+                          instance_variable_set("@#{this_graph['name']}_#{_name}_last", _rawdata)
                         else
-                          #warn "SnmpGraph: #{this_graph['name']}_#{_name}: Couldn't fetch lasttime. using #{now}"
+                          #warn "SnmpGraph: #{this_graph['name']}_#{_name}: #{this_graph['name']}_#{_name}_last not set. Setting this datapoint to current"
+                          instance_variable_set("@#{this_graph['name']}_#{_name}_last", _rawdata)
+                          last = _rawdata
                           lasttime = now
                         end
-                        #warn "SnmpGraph: Setting #{this_graph['name']}_#{_name}_last to #{_rawdata}. Was #{last}"
-                        instance_variable_set("@#{this_graph['name']}_#{_name}_last", _rawdata)
+                        warn "SnmpGraph: #{this_graph['name']}_#{_name}: Last: #{last} LastTime: #{lasttime} Current: #{_rawdata}, now: #{now}"
+                        _pre_invert_data = octetsToXps(last,lasttime,_rawdata,now,_output)
+                        #_data = octetsToXps(last,lasttime,_rawdata,now,_output)
+                      when 'default'
+                        _pre_invert_data = _rawdata
+                        #_data = _rawdata
                       else
-                        #warn "SnmpGraph: #{this_graph['name']}_#{_name}: #{this_graph['name']}_#{_name}_last not set. Setting this datapoint to current"
-                        instance_variable_set("@#{this_graph['name']}_#{_name}_last", _rawdata)
-                        last = _rawdata
-                        lasttime = now
+                        _pre_invert_data = _rawdata
+                        #_data = _rawdata
                       end
-                      #warn "SnmpGraph: #{this_graph['name']}_#{_name}: Last: #{last} LastTime: #{lasttime} Current: #{_rawdata}, now: #{now}"
-                      _data = octetsToXps(last,lasttime,_rawdata,now,'mbps')
-                    when 'default'
-                      _data = _rawdata
-                    else
-                      _data = _rawdata
-                    end
-                    #warn "SnmpGraph: #{this_graph['name']}_#{_name}: Current: #{_data}, now: #{now}"
-                    job_now = [_data,now]
-                    #warn "SNMPGraph: #{this_graph['name']}: #{now} Name: #{_name} OID: #{_oid} Value: #{_data} job_now: #{job_now} "
-                    _foo = instance_variable_get("@#{this_graph['name']}_#{_name}_datapoints")
-                    #warn "SNMPGraph: #{this_graph['name']}: #{this_graph['name']}_#{_name} _foo set: #{_foo}"
-                    if _foo.length >= @snmpgraph_graph_depth.to_i
-                      #warn "SNMPGraph: #{this_graph['name']}_#{_name}_datapoints: graph_depth reached (#{_foo.length}). Dropping"
-                      _foo = _foo.drop(_foo.length - @snmpgraph_graph_depth.to_i + 1)
-                      #warn "SNMPGraph: #{this_graph['name']}_#{_name}_datapoints: graph_depth now (#{_foo.length})."
-                    end
-                    _foo << job_now
-                    #warn "SNMPGraph: #{this_graph['name']}: #{this_graph['name']}_#{_name} _foo appended: #{_foo}"
-                    instance_variable_set("@#{this_graph['name']}_#{_name}_datapoints", _foo)
-                    _bar = instance_variable_get("@#{this_graph['name']}_#{_name}_datapoints")
-                    #warn "SNMPGraph: #{this_graph['name']}: #{this_graph['name']}_#{_name} _bar now: #{_bar}"
-                    #warn "SNMPGraph: #{this_graph['name']}: #{this_graph['name']}_#{_name} _bar now: #{_bar.length} deep"
-                    _entity_hash = Hash.new
-                    _entity_hash['target'] = _name
-                    _entity_hash['datapoints'] = _foo
-                    job_graphite << _entity_hash
-                    if @snmpgraph_history_enable
-                      #warn "SNMPGraph: History enabled. appending to #{this_graph['name']}_#{_name}_datapoints object"
-                      snmpGraph_history["#{this_graph['name']}_#{_name}_datapoints"] << job_now
+                      if polled_entity[1]['invert']
+                        if _pre_invert_data > 0 then
+                          _data = -_pre_invert_data;
+                          #we have to set the invert max so we can pass data-min
+                          if instance_variable_defined?("@#{this_graph['name']}_lowest_val")
+                            lowest      = instance_variable_get("@#{this_graph['name']}_lowest_val")
+                            lowest_date = instance_variable_get("@#{this_graph['name']}_lowest_time")
+                            if lowest > _data
+                              instance_variable_set("@#{this_graph['name']}_lowest_val", _data)
+                              instance_variable_set("@#{this_graph['name']}_lowest_time", now)
+                              lowest      = _data
+                              lowest_data = now
+                            end
+                          else
+                            lowest      = _data
+                            lowest_date = now
+                            instance_variable_set("@#{this_graph['name']}_lowest_val", _data)
+                            instance_variable_set("@#{this_graph['name']}_lowest_time", now)
+                          end
+                        else
+                          _data = _pre_invert_data
+                        end
+                      else
+                        _data = _pre_invert_data
+                      end
+                      if instance_variable_defined?("@#{this_graph['name']}_lowest_val")
+                        lowest = instance_variable_get("@#{this_graph['name']}_lowest_val")
+                      else
+                        lowest = 0
+                      end
+                      warn "SnmpGraph: #{this_graph['name']}_#{_name}: Current: #{_data}, now: #{now} lowest: #{lowest}"
+                      job_now = [_data,now]
+                      #warn "SNMPGraph: #{this_graph['name']}: #{now} Name: #{_name} OID: #{_oid} Value: #{_data} job_now: #{job_now} "
+                      _foo = instance_variable_get("@#{this_graph['name']}_#{_name}_datapoints")
+                      #warn "SNMPGraph: #{this_graph['name']}: #{this_graph['name']}_#{_name} _foo set: #{_foo}"
+                      if _foo.length >= @snmpgraph_graph_depth.to_i
+                        #warn "SNMPGraph: #{this_graph['name']}_#{_name}_datapoints: graph_depth reached (#{_foo.length}). Dropping"
+                        _foo = _foo.drop(_foo.length - @snmpgraph_graph_depth.to_i + 1)
+                        #warn "SNMPGraph: #{this_graph['name']}_#{_name}_datapoints: graph_depth now (#{_foo.length})."
+                      end
+                      _foo << job_now
+                      #warn "SNMPGraph: #{this_graph['name']}: #{this_graph['name']}_#{_name} _foo appended: #{_foo}"
+                      instance_variable_set("@#{this_graph['name']}_#{_name}_datapoints", _foo)
+                      #_bar = instance_variable_get("@#{this_graph['name']}_#{_name}_datapoints")
+                      #warn "SNMPGraph: #{this_graph['name']}: #{this_graph['name']}_#{_name} _bar now: #{_bar}"
+                      #warn "SNMPGraph: #{this_graph['name']}: #{this_graph['name']}_#{_name} _bar now: #{_bar.length} deep"
+                      _entity_hash = Hash.new
+                      _entity_hash['target'] = "#{_name}: #{_data}"
+                      _entity_hash['datapoints'] = _foo
+                      #TODO: Implement me
+                      #_entity_hash['renderer'] = _renderer
+                      #_entity_hash['color'] = _color
+                      job_graphite << _entity_hash
+                      if @snmpgraph_history_enable
+                        #warn "SNMPGraph: History enabled. appending to #{this_graph['name']}_#{_name}_datapoints object"
+                        snmpGraph_history["#{this_graph['name']}_#{_name}_datapoints"] << job_now
+                      end
                     end
                   end#polled entity for this job
-                  #warn "SNMPGraph: job_graphite: #{this_graph['name']}  #{job_graphite}"
-                  send_event(this_graph['name'], series: job_graphite )
+                  #warn "SNMPGraph: Sending Event: job_graphite: #{this_graph['name']}  #{job_graphite}"
+                  send_event(this_graph['name'], series: job_graphite, min: lowest )
                 end#this graph job
               end
             end#this_graph iterator
