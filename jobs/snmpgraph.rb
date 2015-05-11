@@ -201,7 +201,7 @@ graph_data['graphs'].each do |data_view|
                           last = _rawdata
                           lasttime = now
                         end
-                        warn "SnmpGraph: #{this_graph['name']}_#{_name}: Last: #{last} LastTime: #{lasttime} Current: #{_rawdata}, now: #{now}"
+                        #warn "SnmpGraph: #{this_graph['name']}_#{_name}: Last: #{last} LastTime: #{lasttime} Current: #{_rawdata}, now: #{now}"
                         _pre_invert_data = octetsToXps(last,lasttime,_rawdata,now,_output)
                         #_data = octetsToXps(last,lasttime,_rawdata,now,_output)
                       when 'default'
@@ -258,7 +258,7 @@ graph_data['graphs'].each do |data_view|
                       else
                         lowest = 0
                       end
-                      warn "SnmpGraph: #{this_graph['name']}_#{_name}: Current: #{_data}, now: #{now} lowest: #{lowest}"
+                      #warn "SnmpGraph: #{this_graph['name']}_#{_name}: Current: #{_data}, now: #{now} lowest: #{lowest}"
                       job_now = [_data,now]
                       #warn "SNMPGraph: #{this_graph['name']}: #{now} Name: #{_name} OID: #{_oid} Value: #{_data} job_now: #{job_now} "
                       _foo = instance_variable_get("@#{this_graph['name']}_#{_name}_datapoints")
@@ -275,7 +275,7 @@ graph_data['graphs'].each do |data_view|
                       #warn "SNMPGraph: #{this_graph['name']}: #{this_graph['name']}_#{_name} _bar now: #{_bar}"
                       #warn "SNMPGraph: #{this_graph['name']}: #{this_graph['name']}_#{_name} _bar now: #{_bar.length} deep"
                       _entity_hash = Hash.new
-                      _entity_hash['target'] = "#{_name}: #{_data}"
+                      _entity_hash['target'] = "#{_name}: #{_pre_invert_data}"
                       _entity_hash['datapoints'] = _foo
                       #TODO: Implement me
                       #_entity_hash['renderer'] = _renderer
