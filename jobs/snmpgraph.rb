@@ -139,6 +139,11 @@ graph_data['graphs'].each do |data_view|
                   job_graphite = []
                   lowest   = 0
                   now      = Time.now.to_i
+                  if this_graph['bgcolor']
+                    bgcolor = this_graph['bgcolor']
+                  else
+                    bgcolor = @bgcolor_default
+                  end
                   this_graph['entities'].each do |polled_entity|
                     if !polled_entity[1]['oid']
                       warn "SNMPGraph: #{this_graph['name']}: #{polled_entity[0]} Skipping. no OID found."
@@ -147,11 +152,6 @@ graph_data['graphs'].each do |data_view|
                       manager  = SNMP::Manager.new(:host => this_graph['address'], :community => this_graph['community'])
                       _name    = polled_entity[0]
                       _oid     = polled_entity[1]['oid']
-                      if this_graph['bgcolor']
-                        bgcolor = this_graph['bgcolor']
-                      else
-                        bgcolor = @bgcolor_default
-                      end
                       #TODO: work with jwalton to get this supported.
                       #if polled_entity[1]['renderer']
                       #  _renderer = polled_entity[1]['renderer']
