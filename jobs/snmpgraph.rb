@@ -212,6 +212,23 @@ graph_data['graphs'].each do |data_view|
                         #_data = _rawdata
                       end
                       if polled_entity[1]['invert']
+                        #figure out the floor
+                        olddata = instance_variable_get("@#{this_graph['name']}_#{_name}_datapoints")
+                        if instance_variable_defined?("@#{this_graph['name']}_lowest_val")
+                          lowest      = instance_variable_get("@#{this_graph['name']}_lowest_val")
+                          lowest_date = instance_variable_get("@#{this_graph['name']}_lowest_time")
+                        else
+                          lowest = 0
+                          lowest_date = 0
+                        end
+                        olddata.each do |val,time|
+                          if val < lowest then
+                            instance_variable_set("@#{this_graph['name']}_lowest_val", val)
+                            instance_variable_set("@#{this_graph['name']}_lowest_time", time)
+                            lowest      = val
+                            lowest_date = time
+                          end
+                        end
                         if _pre_invert_data > 0 then
                           _data = -_pre_invert_data;
                           #we have to set the invert max so we can pass data-min
