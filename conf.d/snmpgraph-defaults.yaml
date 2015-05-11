@@ -2,6 +2,8 @@
 polling_options:
   interval: 60
 graph_options:
+  bgcolor_enable: true
+  bgcolor: '#0F8'
   data-displayed-value: undef
   data-renderer: 'area'
   data-stroke: true

@@ -30,6 +30,8 @@ end
 @snmpgraph_history_file=graph_data['history']['file']
 @snmpgraph_history_enable=graph_data['history']['enable']
 @snmpgraph_history_frequency=graph_data['history']['write_frequency']
+@bgcolor_enable=graph_data['graph_options']['bgcolor_enable']
+@bgcolor_default=graph_data['graph_options']['bgcolor']
 #warn "SNMPGraph: Graph Datafile: #{SNMPGRAPH_GRAPH_DATA_FILE}"
 #warn "SNMPGRAPH: Graph data: #{graph_data}"
 #warn "SNMPGraph: Poll interval: #{@snmpgraph_poll_interval}"
@@ -145,6 +147,11 @@ graph_data['graphs'].each do |data_view|
                       manager  = SNMP::Manager.new(:host => this_graph['address'], :community => this_graph['community'])
                       _name    = polled_entity[0]
                       _oid     = polled_entity[1]['oid']
+                      if this_graph['bgcolor']
+                        bgcolor = this_graph['bgcolor']
+                      else
+                        bgcolor = @bgcolor_default
+                      end
                       #TODO: work with jwalton to get this supported.
                       #if polled_entity[1]['renderer']
                       #  _renderer = polled_entity[1]['renderer']
@@ -215,7 +222,7 @@ graph_data['graphs'].each do |data_view|
                               instance_variable_set("@#{this_graph['name']}_lowest_val", _data)
                               instance_variable_set("@#{this_graph['name']}_lowest_time", now)
                               lowest      = _data
-                              lowest_data = now
+                              lowest_date = now
                             end
                           else
                             lowest      = _data
@@ -264,7 +271,13 @@ graph_data['graphs'].each do |data_view|
                     end
                   end#polled entity for this job
                   #warn "SNMPGraph: Sending Event: job_graphite: #{this_graph['name']}  #{job_graphite}"
-                  send_event(this_graph['name'], series: job_graphite, min: lowest )
+                  if @bgcolor_enable
+                    #I can't guarantee my current implementation will be accepted as a PR, so giving us
+                    #an option to not use this
+                    send_event(this_graph['name'], series: job_graphite, min: lowest , bgcolor: bgcolor )
+                  else
+                    send_event(this_graph['name'], series: job_graphite, min: lowest )
+                  end
                 end#this graph job
               end
             end#this_graph iterator

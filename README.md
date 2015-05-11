@@ -7,7 +7,7 @@ This aims to be a [Dashing](http://shopify.github.io/dashing/#overview) job and 
 -	Clone [the repository](https://github.com/wolfspyre/dashing-snmpgraph)
 -	Run the `scripts/deploy.sh` shell script, which will perform the needed actions to install this widget.
   - `./scripts/deploy.sh /home/pi/dashing-plugins/dashing-snmpgraph parent_dir_of_install dashboard_install_dir`
-- Create `snmpgraph_whatever.yaml` file(s) in the `conf.d` directory. It is recommended to create one file per device, but that's completely arbitrary.
+- Create `snmpgraph_whatever.yaml` file(s) in the `conf.d` directory. It is recommended to create one file per device, but that's only to ease management.
   - model this file from the example_snmpgraph_interfaces.yaml file in the `conf.d` directory. It will not be symlinked into your dashboard's `conf.d` directory, and is intended to provide an example of how to use this plugin.
 -	Restart Dashing to pick up the new changes.
 -	Navigate to the newly installed snmpgraph dashboard in your browser, and revel in the dashboardy goodness.
