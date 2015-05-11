@@ -7,14 +7,18 @@ This aims to be a [Dashing](http://shopify.github.io/dashing/#overview) job and 
 -	Clone [the repository](https://github.com/wolfspyre/dashing-snmpgraph)
 -	Run the `scripts/deploy.sh` shell script, which will perform the needed actions to install this widget.
   - `./scripts/deploy.sh /home/pi/dashing-plugins/dashing-snmpgraph parent_dir_of_install dashboard_install_dir`
-- Create `snmpgraph_whatever.yaml` file(s) in the `conf.d` directory. It is recommended to create one file per device, but that's completely arbitrary.
+- Create `snmpgraph_whatever.yaml` file(s) in the `conf.d` directory. It is recommended to create one file per device, but that's only to ease management.
   - model this file from the example_snmpgraph_interfaces.yaml file in the `conf.d` directory. It will not be symlinked into your dashboard's `conf.d` directory, and is intended to provide an example of how to use this plugin.
 -	Restart Dashing to pick up the new changes.
 -	Navigate to the newly installed snmpgraph dashboard in your browser, and revel in the dashboardy goodness.
 
 ###Required Widgets
 
-The graphs depend on [Jason Walton's Rickshawgraph plugin](https://gist.github.com/jwalton/6614023). The process for installation is pretty straightforward. You should review the installation instructions contained within the repo, as they may supersede these; but this should get you going. There are two ways to do it.
+The graphs depend on [Jason Walton's Rickshawgraph plugin](https://gist.github.com/jwalton/6614023).
+
+It is important to note that as of 5/11/2015 the `bgcolor` support is only hacked in via [my fork of this plugin](https://gist.github.com/wolfspyre/0d03e9bcb63f6fac2541) Hopefully this (or something like it) will get merged in.
+
+The process for installation is pretty straightforward. You should review the installation instructions contained within the repo, as they may supersede these; but this should get you going. There are two ways to do it.
 
 -	Manual Installation
 
