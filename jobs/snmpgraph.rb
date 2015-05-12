@@ -166,6 +166,7 @@ graph_data['graphs'].each do |data_view|
                         _color = 'somedefault'
                       end
                       _rawdata = manager.get_value(_oid).to_i
+                      manager.close
                       if polled_entity[1]
                         mode   = polled_entity[1]['mode']
                       else
