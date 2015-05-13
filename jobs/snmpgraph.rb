@@ -52,19 +52,19 @@ def octetsToXps(last_octet_count,last_unixtime,current_octet_count,current_unixt
     case output
       #http://www.matisse.net/bitcalc/
     when 'bps'
-      xps_out = bps.to_i
+      xps_out = bps.to_f
     when 'kbps'
       xps = (bps/1024)
-      xps_out = xps.to_i
+      xps_out = xps.to_f
     when 'mbps'
       xps = (bps/1024000)
-      xps_out = xps.to_i
+      xps_out = xps.to_f
     else
       #assume mbps
       xps = (bps/1024000)
-      xps_out= xps.to_i
+      xps_out= xps.to_f
     end
-    warn "SNMPGraph octetsToXps: octets: #{octets} seconds: #{seconds} bits: #{bits} bps: #{bps} #{output}: #{xps_out}"
+    #warn "SNMPGraph octetsToXps: octets: #{octets} seconds: #{seconds} bits: #{bits} bps: #{bps} #{output}: #{xps_out}"
   end
 #  warn "SNMPGraph: #{octets} #{bits} #{seconds} #{bps} #{xps_out}"
  xps_out
@@ -110,6 +110,7 @@ graph_data['graphs'].each do |data_view|
                 #warn "SNMPGraph: this_graph: #{this_graph}"
                 #this should be the graph elements
                 #create the SNMP request
+                _num_entities = this_graph['entities'].count
                 this_graph['entities'].each do |polled_entity|
                   #warn "SNMPGraph: polled_entity: #{polled_entity}"
                   if !polled_entity[1]['oid']
@@ -144,6 +145,8 @@ graph_data['graphs'].each do |data_view|
                   else
                     bgcolor = @bgcolor_default
                   end
+                  _num_colors   = 0
+                  _graph_colors = ''
                   this_graph['entities'].each do |polled_entity|
                     if !polled_entity[1]['oid']
                       warn "SNMPGraph: #{this_graph['name']}: #{polled_entity[0]} Skipping. no OID found."
@@ -159,13 +162,16 @@ graph_data['graphs'].each do |data_view|
                       #  #todo set default dynamically
                       #  _renderer = 'area'
                       #end
-                      if polled_entity[1]['color']
-                        #TODO: implement me
-                        _color = polled_entity[1]['color']
-                      else
-                        _color = 'somedefault'
+                      if polled_entity[1]['color'] and polled_entity[1]['color'] != 'undef'
+                        _num_colors = _num_colors + 1
+                        if _graph_colors.bytesize > 0
+                          _graph_colors = "#{_graph_colors}:#{polled_entity[1]['color']}"
+                        else
+                          _graph_colors = "#{polled_entity[1]['color']}"
+                        end
                       end
                       _rawdata = manager.get_value(_oid).to_i
+                      manager.close
                       if polled_entity[1]
                         mode   = polled_entity[1]['mode']
                       else
@@ -201,7 +207,7 @@ graph_data['graphs'].each do |data_view|
                           last = _rawdata
                           lasttime = now
                         end
-                        warn "SnmpGraph: #{this_graph['name']}_#{_name}: Last: #{last} LastTime: #{lasttime} Current: #{_rawdata}, now: #{now}"
+                        #warn "SnmpGraph: #{this_graph['name']}_#{_name}: Last: #{last} LastTime: #{lasttime} Current: #{_rawdata}, now: #{now}"
                         _pre_invert_data = octetsToXps(last,lasttime,_rawdata,now,_output)
                         #_data = octetsToXps(last,lasttime,_rawdata,now,_output)
                       when 'default'
@@ -212,6 +218,23 @@ graph_data['graphs'].each do |data_view|
                         #_data = _rawdata
                       end
                       if polled_entity[1]['invert']
+                        #figure out the floor
+                        olddata = instance_variable_get("@#{this_graph['name']}_#{_name}_datapoints")
+                        if instance_variable_defined?("@#{this_graph['name']}_lowest_val")
+                          lowest      = instance_variable_get("@#{this_graph['name']}_lowest_val")
+                          lowest_date = instance_variable_get("@#{this_graph['name']}_lowest_time")
+                        else
+                          lowest = 0
+                          lowest_date = 0
+                        end
+                        olddata.each do |val,time|
+                          if val < lowest then
+                            instance_variable_set("@#{this_graph['name']}_lowest_val", val)
+                            instance_variable_set("@#{this_graph['name']}_lowest_time", time)
+                            lowest      = val
+                            lowest_date = time
+                          end
+                        end
                         if _pre_invert_data > 0 then
                           _data = -_pre_invert_data;
                           #we have to set the invert max so we can pass data-min
@@ -241,7 +264,7 @@ graph_data['graphs'].each do |data_view|
                       else
                         lowest = 0
                       end
-                      warn "SnmpGraph: #{this_graph['name']}_#{_name}: Current: #{_data}, now: #{now} lowest: #{lowest}"
+                      #warn "SnmpGraph: #{this_graph['name']}_#{_name}: Current: #{_data}, now: #{now} lowest: #{lowest}"
                       job_now = [_data,now]
                       #warn "SNMPGraph: #{this_graph['name']}: #{now} Name: #{_name} OID: #{_oid} Value: #{_data} job_now: #{job_now} "
                       _foo = instance_variable_get("@#{this_graph['name']}_#{_name}_datapoints")
@@ -258,11 +281,10 @@ graph_data['graphs'].each do |data_view|
                       #warn "SNMPGraph: #{this_graph['name']}: #{this_graph['name']}_#{_name} _bar now: #{_bar}"
                       #warn "SNMPGraph: #{this_graph['name']}: #{this_graph['name']}_#{_name} _bar now: #{_bar.length} deep"
                       _entity_hash = Hash.new
-                      _entity_hash['target'] = "#{_name}: #{_data}"
+                      _entity_hash['target'] = "#{_name}: #{_pre_invert_data}"
                       _entity_hash['datapoints'] = _foo
                       #TODO: Implement me
                       #_entity_hash['renderer'] = _renderer
-                      #_entity_hash['color'] = _color
                       job_graphite << _entity_hash
                       if @snmpgraph_history_enable
                         #warn "SNMPGraph: History enabled. appending to #{this_graph['name']}_#{_name}_datapoints object"
@@ -274,15 +296,24 @@ graph_data['graphs'].each do |data_view|
                   if @bgcolor_enable
                     #I can't guarantee my current implementation will be accepted as a PR, so giving us
                     #an option to not use this
-                    send_event(this_graph['name'], series: job_graphite, min: lowest , bgcolor: bgcolor )
+                    if _num_entities == _num_colors
+                      send_event(this_graph['name'], bgcolor: bgcolor, series: job_graphite, min: lowest, colors: _graph_colors)
+                    else
+                      #warn "SNMPGraph: #{this_graph['name']}: Got #{_num_colors} colors from yaml, but found #{_num_entities} elements. Not declaring colors. Colors assembled: #{_graph_colors}"
+                      send_event(this_graph['name'], bgcolor: bgcolor, series: job_graphite, min: lowest )
+                    end
+                  end
+                  if _num_entities == _num_colors
+                    send_event(this_graph['name'], series: job_graphite, min: lowest, colors: _graph_colors)
                   else
                     send_event(this_graph['name'], series: job_graphite, min: lowest )
+                    #warn "SNMPGraph: #{this_graph['name']}: Got #{_num_colors} colors from yaml, but found #{_num_entities} elements. Not declaring colors. Colors assembled: #{_graph_colors}"
                   end
                 end#this graph job
               end
             end#this_graph iterator
           #else
-          #  warn "SNMPGraph: data_view_iterator is not an Array"
+          #warn "SNMPGraph: data_view_iterator is not an Array"
           end#data_view_iterator array
         end#data_view iterator
       end#data_view
