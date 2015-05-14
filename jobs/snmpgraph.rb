@@ -47,27 +47,39 @@ def octetsToXps(last_octet_count,last_unixtime,current_octet_count,current_unixt
     octets  = current_octet_count - last_octet_count
     seconds = current_unixtime - last_unixtime
     #octets (bytes) -> bits
-    bits = octets * 8
+    bits = bytesTo(octets,'bits')
     bps = bits / seconds
     case output
       #http://www.matisse.net/bitcalc/
     when 'bps'
       xps_out = bps.to_f
     when 'kbps'
-      xps = (bps/1024)
+      xps = bytesTo(bps,'kilobytes')
       xps_out = xps.to_f
     when 'mbps'
-      xps = (bps/1024000)
+      xps = bytesTo(bps,'megabytes')
       xps_out = xps.to_f
     else
       #assume mbps
-      xps = (bps/1024000)
+      xps = (bps/1000000)
       xps_out= xps.to_f
     end
     #warn "SNMPGraph octetsToXps: octets: #{octets} seconds: #{seconds} bits: #{bits} bps: #{bps} #{output}: #{xps_out}"
   end
 #  warn "SNMPGraph: #{octets} #{bits} #{seconds} #{bps} #{xps_out}"
  xps_out
+end
+
+def bytesTo(bytes,output='megabytes')
+  case output
+  when 'bits'
+    _bytesToOutput = (bytes*8)
+  when 'kilobytes'
+    _bytesToOutput = (bytes/1000)
+  when 'megabytes'
+    _bytesToOutput = (bytes/1000000)
+  end
+  _bytesToOutput
 end
 
 if @snmpgraph_history_enable

@@ -9,14 +9,14 @@ dashboard0:
       entities:
         graph_element_0:
           oid: '1.3.6.1.2.1.2.2.1.10.1'
-          color: undef
-          invert: false
+          color: '#fff'
+          invert: false #implied
           mode: 'octets_to_Kbps'
         graph_element_0:
           oid: '1.3.6.1.2.1.2.2.1.16.1'
-          color: undef
-          invert: false
-          mode: 'default'
+          color: undef  #implied
+          invert: false #implied
+          mode: 'default' #implied
     - name: 'example_graph_1'
       address: '1.2.3.5'
       community: 'snmp_community'
@@ -25,11 +25,11 @@ dashboard0:
       entities:
         graph_element_0:
           oid: '1.3.6.1.2.1.2.2.1.10.1'
-          color: undef
+          color: undef #implied
           mode: 'octets_to_Kbps'
-          invert: false
+          invert: false #implied
         graph_element_0:
           oid: '1.3.6.1.2.1.2.2.1.10.1'
-          color: undef
+          color: undef #implied
           mode: 'default'
-          invert: false
+          invert: false #implied
