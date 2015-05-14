@@ -1,8 +1,14 @@
 #snmp_datarator.rb
 #
 require 'snmp'
-require 'yaml'
+#require 'yaml'
+require 'safe_yaml'
 require 'pry'
+#
+SafeYAML::OPTIONS[:default_mode] = :safe
+SafeYAML::OPTIONS[:deserialize_symbols] = true
+SafeYAML::OPTIONS[:raise_on_unknown_tag] = true
+
 ##############################################
 # Load configuration
 ##############################################
@@ -40,14 +46,31 @@ end
 #warn "SNMPGraph: History frequency: #{@snmpgraph_history_frequency}"
 #warn "SNMPGraph: Graph Depth: #{@snmpgraph_graph_depth}"
 
-def octetsToXps(last_octet_count,last_unixtime,current_octet_count,current_unixtime,output='mbps')
+def counterToXps(last_count,last_unixtime,current_count,current_unixtime,output='mbps',input='octets')
   if last_unixtime == current_unixtime
     xps_out = 0
   else
-    octets  = current_octet_count - last_octet_count
+    count  = current_count - last_count
     seconds = current_unixtime - last_unixtime
     #octets (bytes) -> bits
-    bits = bytesTo(octets,'bits')
+    case input
+    when 'ticks'
+      if output != 'ticks'
+        warn "SNMPGraph: counterToXps: cannot convert ticks to anything other than ticks. You asked me to convert ticks to #{output}. returning 0"
+        xps_out=0
+      else
+        xps_out= (count / seconds).to_f
+      end
+    when 'octets'
+      #check to see if all we want is bytes/sec
+      if output=='Bps'
+        xps_out = (count / seconds).to_f
+      else
+        bits = bytesTo(count,'bits')
+      end
+    when 'bits'
+      bits = count
+    end
     bps = bits / seconds
     case output
       #http://www.matisse.net/bitcalc/
@@ -64,7 +87,7 @@ def octetsToXps(last_octet_count,last_unixtime,current_octet_count,current_unixt
       xps = (bps/1000000)
       xps_out= xps.to_f
     end
-    #warn "SNMPGraph octetsToXps: octets: #{octets} seconds: #{seconds} bits: #{bits} bps: #{bps} #{output}: #{xps_out}"
+    #warn "SNMPGraph counterToXps: octets: #{octets} seconds: #{seconds} bits: #{bits} bps: #{bps} #{output}: #{xps_out}"
   end
 #  warn "SNMPGraph: #{octets} #{bits} #{seconds} #{bps} #{xps_out}"
  xps_out
@@ -191,14 +214,27 @@ graph_data['graphs'].each do |data_view|
                       end
                       #store and convert if necessary for the mode and item.
                       case mode
-                      when 'octets_to_Mbps', 'octets_to_Kbps', 'octets_to_bps'
+                      when 'octets_to_Mbps', 'octets_to_Kbps', 'octets_to_bps', 'bits_per_second', 'bytes_per_second','ticks_per_second'
                         case mode
                         when 'octets_to_Mbps'
                           _output='mbps'
+                          _input = 'octets'
                         when 'octets_to_Kbps'
                           _output='kbps'
+                          _input = 'octets'
                         when 'octets_to_bps'
-                          _output=bps
+                          _output='bps'
+                          _input = 'octets'
+                        when 'bits_per_second'
+                          _output = 'bps'
+                          _input = 'bits'
+                          #we have to convert bits to bytes to use our
+                        when 'bytes_per_second'
+                          _output = 'Bps'
+                          _input = 'octets'
+                        when 'ticks_per_second'
+                          _output = 'ticks'
+                          _input = 'ticks'
                         end
                         #we need to fetch the last timeseries data so that we can
                         #calculate Mbps from octets
@@ -220,14 +256,25 @@ graph_data['graphs'].each do |data_view|
                           lasttime = now
                         end
                         #warn "SnmpGraph: #{this_graph['name']}_#{_name}: Last: #{last} LastTime: #{lasttime} Current: #{_rawdata}, now: #{now}"
-                        _pre_invert_data = octetsToXps(last,lasttime,_rawdata,now,_output)
-                        #_data = octetsToXps(last,lasttime,_rawdata,now,_output)
+                        case mode
+                        when  'octets_to_Mbps', 'octets_to_Kbps', 'octets_to_bps','ticks_per_second'
+                          #we should call counterToXps here
+                          _pre_invert_data = counterToXps(last,lasttime,_rawdata,now,_output,_input)
+                        #_data = counterToXps(last,lasttime,_rawdata,now,_output)
+                        end
+                      when 'bytes_to_MB', 'bytes_to_kB'
+                        case mode
+                        when 'bytes_to_MB'
+                          _pre_invert_data = bytesTo(_rawdata,'megabytes')
+                          #warn "SnmpGraph: #{this_graph['name']}_#{_name} bytes_to_MB: Current: #{_rawdata} _pre_invert_data: #{_pre_invert_data} now: #{now}"
+                        when 'bytes_to_kB'
+                          _pre_invert_data = bytesTo(_rawdata,'kilobytes')
+                          #warn "SnmpGraph: #{this_graph['name']}_#{_name} bytes_to_kB: Current: #{_rawdata} _pre_invert_data: #{_pre_invert_data} now: #{now}"
+                        end
                       when 'default'
                         _pre_invert_data = _rawdata
-                        #_data = _rawdata
                       else
                         _pre_invert_data = _rawdata
-                        #_data = _rawdata
                       end
                       if polled_entity[1]['invert']
                         #figure out the floor
