@@ -147,12 +147,12 @@ graph_data['graphs'].each do |data_view|
                   end
                   _num_colors   = 0
                   _graph_colors = ''
+                  manager  = SNMP::Manager.new(:host => this_graph['address'], :community => this_graph['community'])
                   this_graph['entities'].each do |polled_entity|
                     if !polled_entity[1]['oid']
                       warn "SNMPGraph: #{this_graph['name']}: #{polled_entity[0]} Skipping. no OID found."
                     else
                       #warn "SNMPGraph: #{this_graph['name']}: #{polled_entity[0]}"
-                      manager  = SNMP::Manager.new(:host => this_graph['address'], :community => this_graph['community'])
                       _name    = polled_entity[0]
                       _oid     = polled_entity[1]['oid']
                       #TODO: work with jwalton to get this supported.
@@ -171,7 +171,7 @@ graph_data['graphs'].each do |data_view|
                         end
                       end
                       _rawdata = manager.get_value(_oid).to_i
-                      manager.close
+                      #warn "SNMPGraph:  #{this_graph['name']}: #{_name} #{_oid} #{_rawdata}"
                       if polled_entity[1]
                         mode   = polled_entity[1]['mode']
                       else
@@ -292,6 +292,7 @@ graph_data['graphs'].each do |data_view|
                       end
                     end
                   end#polled entity for this job
+                  manager.close
                   #warn "SNMPGraph: Sending Event: job_graphite: #{this_graph['name']}  #{job_graphite}"
                   if @bgcolor_enable
                     #I can't guarantee my current implementation will be accepted as a PR, so giving us
