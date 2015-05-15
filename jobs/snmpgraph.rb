@@ -52,40 +52,50 @@ def counterToXps(last_count,last_unixtime,current_count,current_unixtime,output=
   else
     count  = current_count - last_count
     seconds = current_unixtime - last_unixtime
+    #warn "SNMPGraph: counterToXps: count: #{count} Seconds: #{seconds}"
     #octets (bytes) -> bits
     case input
+
+      #convert everything into 'units per second'.
+      #leave ticks alone
+      #convert octets to bits (units)
+      #leave bits alone (unuts)
     when 'ticks'
       if output != 'ticks'
-        warn "SNMPGraph: counterToXps: cannot convert ticks to anything other than ticks. You asked me to convert ticks to #{output}. returning 0"
-        xps_out=0
+        #warn "SNMPGraph: counterToXps: cannot convert ticks to anything other than ticks. You asked me to convert ticks to #{output}. returning 0"
+        units=0
       else
-        xps_out= (count / seconds).to_f
+        units = count / seconds
       end
     when 'octets'
-      #check to see if all we want is bytes/sec
-      if output=='Bps'
-        xps_out = (count / seconds).to_f
-      else
-        bits = bytesTo(count,'bits')
-      end
+      units = (bytesTo(count,'bits')) / seconds
     when 'bits'
-      bits = count
+      units = count / seconds
+    else
+      warn "SNMPGraph: counterToXps: cannot convert #{input} to #{output}"
     end
-    bps = bits / seconds
+
+
     case output
       #http://www.matisse.net/bitcalc/
-    when 'bps'
-      xps_out = bps.to_f
+    when 'bps', 'ticks'
+      xps_out = units.to_f
     when 'kbps'
-      xps = bytesTo(bps,'kilobytes')
-      xps_out = xps.to_f
+      xps_out = (bitsTo(units,'kilobits')).to_f
     when 'mbps'
-      xps = bytesTo(bps,'megabytes')
-      xps_out = xps.to_f
+      xps_out = (bitsTo(units,'megabites')).to_f
+    when 'Bps'
+      xps_out = (bitsTo(units,'bytes')).to_f
+    when 'kBps', 'KBps'
+      xps_out = (bitsTo(units,'kilobytes')).to_f
+    when 'mBps', 'MBps'
+      xps_out = (bitsTo(units,'megabytes')).to_f
+    when 'gBps', 'GBps'
+      xps_out = (bitsTo(units,'gigabytes')).to_f
+    when 'gBps', 'GBps'
+      xps_out = (bitsTo(units,'terabytes')).to_f
     else
-      #assume mbps
-      xps = (bps/1000000)
-      xps_out= xps.to_f
+      warn "SNMPGraph: counterToXps: cannot convert #{units} to #{output}"
     end
     #warn "SNMPGraph counterToXps: octets: #{octets} seconds: #{seconds} bits: #{bits} bps: #{bps} #{output}: #{xps_out}"
   end
@@ -95,14 +105,50 @@ end
 
 def bytesTo(bytes,output='megabytes')
   case output
-  when 'bits'
+  when 'bits','units'
     _bytesToOutput = (bytes*8)
   when 'kilobytes'
     _bytesToOutput = (bytes/1000)
+  when 'kilobits'
+    _bytesToOutput = ((bytes/1000)*8)
   when 'megabytes'
     _bytesToOutput = (bytes/1000000)
+  when 'megabits'
+    _bytesToOutput = ((bytes/1000000)*8)
+  when 'gigabytes'
+    _bytesToOutput = (bytes/1000000000)
+  when 'gigabits'
+      _bytesToOutput = ((bytes/1000000000)*8)
+  when 'terabytes'
+    _bytesToOutput = (bytes/1000000000000)
+  when 'terabytes'
+    _bytesToOutput = ((bytes/1000000000000)*8)
   end
   _bytesToOutput
+end
+
+def bitsTo(bits,output='megabit')
+  case output
+  when 'bytes'
+    _bitsToOutput = (bits/8)
+  when 'kilobits'
+    _bitsToOutput = (bits/1000)
+  when 'kilobytes'
+    _bitsToOutput = ((bits/1000)/8)
+  when 'megabits'
+    _bitsToOutput = (bits/1000000)
+  when 'megabytes'
+    _bitsToOutput = ((bits/1000000)/8)
+  when 'gigabits'
+    _bitsToOutput = (bits/1000000000)
+  when 'gigabytes'
+    _bitsToOutput = ((bits/1000000000)/8)
+  when 'terabits'
+    _bitsToOutput = (bits/1000000000000)
+  when 'terabytes'
+    _bitsToOutput = ((bits/1000000000000)/8)
+  end
+  _bitsToOutput
 end
 
 if @snmpgraph_history_enable
