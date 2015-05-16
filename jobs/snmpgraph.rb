@@ -157,6 +157,15 @@ if @snmpgraph_history_enable
   if File.exists?(snmpGraphHistoryFile)
     warn   "SnmpGraph: History file exists"
     snmpGraph_history = YAML.load_file(snmpGraphHistoryFile)
+    if !snmpGraph_history
+      warn "SNMPGraph: But YAML.load_file couldn't load it for some reason. Reinitializing"
+      snmpGraph_history=Hash.new
+      snmpGraph_history.to_yaml
+  #    warn   "SnmpGraph: History: #{snmpGraph_history}"
+      File.open(snmpGraphHistoryFile, "w") { |f|
+        f.write snmpGraph_history
+      }
+    end
   else
     warn   "SnmpGraph: New history file initialized"
     snmpGraph_history=Hash.new
@@ -201,7 +210,8 @@ graph_data['graphs'].each do |data_view|
                     _oid  = polled_entity[1]['oid'].to_i
                     #fetch or initialize the time series array
                     if @snmpgraph_history_enable
-                      if snmpGraph_history["#{this_graph['name']}_#{_name}_datapoints"] && !snmpGraph_history["#{this_graph['name']}_#{_name}_datapoints"].empty?
+                      #warn "SNMPGraph: #{this_graph['name']}_#{_name}_datapoints"
+                      if snmpGraph_history and snmpGraph_history["#{this_graph['name']}_#{_name}_datapoints"] and !snmpGraph_history["#{this_graph['name']}_#{_name}_datapoints"].empty?
                         #warn "SnmpGraph: History enabled. Populating #{this_graph['name']}_#{_name}_datapoints from file."
                         instance_variable_set("@#{this_graph['name']}_#{_name}_datapoints", snmpGraph_history["#{this_graph['name']}_#{_name}_datapoints"])
                       else
