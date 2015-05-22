@@ -356,6 +356,11 @@ graph_data['graphs'].each do |data_view|
                           if instance_variable_defined?("@#{this_graph['name']}_lowest_val")
                             lowest      = instance_variable_get("@#{this_graph['name']}_lowest_val")
                             lowest_date = instance_variable_get("@#{this_graph['name']}_lowest_time")
+                            if lowest_date == now
+                              #we are going to add our value to lowest, since we're another inverted value from the
+                              #same timeample
+                              lowest = lowest + _data
+                            end
                             if lowest > _data
                               instance_variable_set("@#{this_graph['name']}_lowest_val", _data)
                               instance_variable_set("@#{this_graph['name']}_lowest_time", now)
