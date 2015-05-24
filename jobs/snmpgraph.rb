@@ -79,21 +79,21 @@ def counterToXps(last_count,last_unixtime,current_count,current_unixtime,output=
     case output
       #http://www.matisse.net/bitcalc/
     when 'bps', 'ticks'
-      xps_out = units.to_f
+      xps_out = units.to_i
     when 'kbps'
-      xps_out = (bitsTo(units,'kilobits')).to_f
+      xps_out = (bitsTo(units,'kilobits')).to_i
     when 'mbps'
-      xps_out = (bitsTo(units,'megabites')).to_f
+      xps_out = (bitsTo(units,'megabites')).to_i
     when 'Bps'
-      xps_out = (bitsTo(units,'bytes')).to_f
+      xps_out = (bitsTo(units,'bytes')).to_i
     when 'kBps', 'KBps'
-      xps_out = (bitsTo(units,'kilobytes')).to_f
+      xps_out = (bitsTo(units,'kilobytes')).to_i
     when 'mBps', 'MBps'
-      xps_out = (bitsTo(units,'megabytes')).to_f
+      xps_out = (bitsTo(units,'megabytes')).to_i
     when 'gBps', 'GBps'
-      xps_out = (bitsTo(units,'gigabytes')).to_f
+      xps_out = (bitsTo(units,'gigabytes')).to_i
     when 'gBps', 'GBps'
-      xps_out = (bitsTo(units,'terabytes')).to_f
+      xps_out = (bitsTo(units,'terabytes')).to_i
     else
       warn "SNMPGraph: counterToXps: cannot convert #{units} to #{output}"
     end
@@ -241,7 +241,7 @@ graph_data['graphs'].each do |data_view|
                   manager  = SNMP::Manager.new(:host => this_graph['address'], :community => this_graph['community'])
                   this_graph['entities'].each do |polled_entity|
                     if !polled_entity[1]['oid']
-                      warn "SNMPGraph: #{this_graph['name']}: #{polled_entity[0]} Skipping. no OID found."
+                    warn "SNMPGraph: #{this_graph['name']}: #{polled_entity[0]} Skipping. no OID found."
                     else
                       #warn "SNMPGraph: #{this_graph['name']}: #{polled_entity[0]}"
                       _name    = polled_entity[0]
@@ -318,12 +318,12 @@ graph_data['graphs'].each do |data_view|
                           _pre_invert_data = counterToXps(last,lasttime,_rawdata,now,_output,_input)
                         #_data = counterToXps(last,lasttime,_rawdata,now,_output)
                         end
-                      when 'bytes_to_MB', 'bytes_to_kB'
+                      when 'bytes_to_MB', 'bytes_to_kB', 'bytes_to_megabytes', 'bytes_to_kilobytes'
                         case mode
-                        when 'bytes_to_MB'
+                        when 'bytes_to_MB', 'bytes_to_megabytes'
                           _pre_invert_data = bytesTo(_rawdata,'megabytes')
                           #warn "SnmpGraph: #{this_graph['name']}_#{_name} bytes_to_MB: Current: #{_rawdata} _pre_invert_data: #{_pre_invert_data} now: #{now}"
-                        when 'bytes_to_kB'
+                        when 'bytes_to_kB', 'bytes_to_kilobytes'
                           _pre_invert_data = bytesTo(_rawdata,'kilobytes')
                           #warn "SnmpGraph: #{this_graph['name']}_#{_name} bytes_to_kB: Current: #{_rawdata} _pre_invert_data: #{_pre_invert_data} now: #{now}"
                         end
@@ -343,7 +343,8 @@ graph_data['graphs'].each do |data_view|
                           lowest_date = 0
                         end
                         olddata.each do |val,time|
-                          if val < lowest then
+                          #warn "SNMPGraph: #{this_graph['name']}_#{_name}: val: #{val} lowest: #{lowest}"
+                          if val && val < lowest then
                             instance_variable_set("@#{this_graph['name']}_lowest_val", val)
                             instance_variable_set("@#{this_graph['name']}_lowest_time", time)
                             lowest      = val
@@ -357,20 +358,25 @@ graph_data['graphs'].each do |data_view|
                             lowest      = instance_variable_get("@#{this_graph['name']}_lowest_val")
                             lowest_date = instance_variable_get("@#{this_graph['name']}_lowest_time")
                             if lowest_date == now
+                              warn "SNMPGraph: #{this_graph['name']}_#{_name} current floor: #{lowest}"
                               #we are going to add our value to lowest, since we're another inverted value from the
                               #same timeample
-                              lowest = lowest + _data
+                              _lowest = lowest + _data
+                              warn "SNMPGraph: #{this_graph['name']}_#{_name} new floor: #{lowest}"
+                            else
+                              _lowest = lowest
                             end
-                            if lowest > _data
-                              instance_variable_set("@#{this_graph['name']}_lowest_val", _data)
+
+                            if lowest > _lowest
+                              instance_variable_set("@#{this_graph['name']}_lowest_val", _lowest)
                               instance_variable_set("@#{this_graph['name']}_lowest_time", now)
-                              lowest      = _data
+                              lowest      = _lowest
                               lowest_date = now
                             end
                           else
-                            lowest      = _data
+                            lowest      = _lowest
                             lowest_date = now
-                            instance_variable_set("@#{this_graph['name']}_lowest_val", _data)
+                            instance_variable_set("@#{this_graph['name']}_lowest_val", _lowest)
                             instance_variable_set("@#{this_graph['name']}_lowest_time", now)
                           end
                         else
