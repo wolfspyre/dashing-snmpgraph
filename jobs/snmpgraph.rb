@@ -242,8 +242,19 @@ graph_data['graphs'].each do |data_view|
                     bgcolor = @bgcolor_default
                   end
                   _num_colors   = 0
+                  _num_invert   = 0
+                  _floor        = 0
                   _graph_colors = ''
                   manager  = SNMP::Manager.new(:host => this_graph['address'], :community => this_graph['community'])
+                  this_graph['entities'].each do |polled_entity|
+                    #calculate how many inverted elements we have
+                    #do this so we can approximate that the "floor" should be the lowest number recieved by any inverted
+                    #data sources multiplied by the number of inverted data sources.
+                    if polled_entity[1]['invert']
+                      _num_invert = _num_invert +1
+                    end
+                  end
+                  #warn "SNMPGraph: #{this_graph['name']}: inverted data sources: #{_num_invert}"
                   this_graph['entities'].each do |polled_entity|
                     if !polled_entity[1]['oid']
                     warn "SNMPGraph: #{this_graph['name']}: #{polled_entity[0]} Skipping. no OID found."
@@ -362,26 +373,16 @@ graph_data['graphs'].each do |data_view|
                           if instance_variable_defined?("@#{this_graph['name']}_lowest_val")
                             lowest      = instance_variable_defined?("@#{this_graph['name']}_lowest_val") ? instance_variable_get("@#{this_graph['name']}_lowest_val") : 0
                             lowest_date = instance_variable_defined?("@#{this_graph['name']}_lowest_val") ? instance_variable_get("@#{this_graph['name']}_lowest_time") : now
-                            if lowest_date == now
-                              warn "SNMPGraph: #{this_graph['name']}_#{_name} current floor: #{lowest}"
-                              #we are going to add our value to lowest, since we're another inverted value from the
-                              #same timeample
-                              _lowest = lowest + _data
-                              warn "SNMPGraph: #{this_graph['name']}_#{_name} new floor: #{lowest}"
-                            else
-                              _lowest = lowest
-                            end
-
-                            if lowest && lowest > _lowest
-                              instance_variable_set("@#{this_graph['name']}_lowest_val", _lowest)
+                            if lowest && lowest > _data
+                              instance_variable_set("@#{this_graph['name']}_lowest_val", _data)
                               instance_variable_set("@#{this_graph['name']}_lowest_time", now)
-                              lowest      = _lowest
+                              lowest      = _data
                               lowest_date = now
                             end
                           else
-                            lowest      = _lowest
+                            lowest      = _data
                             lowest_date = now
-                            instance_variable_set("@#{this_graph['name']}_lowest_val", _lowest)
+                            instance_variable_set("@#{this_graph['name']}_lowest_val", lowest)
                             instance_variable_set("@#{this_graph['name']}_lowest_time", now)
                           end
                         else
@@ -390,10 +391,14 @@ graph_data['graphs'].each do |data_view|
                       else
                         _data = _pre_invert_data
                       end
-                      if instance_variable_defined?("@#{this_graph['name']}_lowest_val")
-                        lowest = instance_variable_get("@#{this_graph['name']}_lowest_val")
+                      if _num_invert > 0
+                        lowest = instance_variable_defined?("@#{this_graph['name']}_lowest_val") ? instance_variable_get("@#{this_graph['name']}_lowest_val") : 0
+                        #it's unlikely that all inverted entities are likely to be the peak lowest value
+                        # assuming that the average is 75%. This is arbitrary
+                        _floor = ((lowest * _num_invert) * 0.75)
                       else
-                        lowest = 0
+                        #we have no inverted elements. Floor should be 0
+                        _floor = 0
                       end
                       #warn "SnmpGraph: #{this_graph['name']}_#{_name}: Current: #{_data}, now: #{now} lowest: #{lowest}"
                       job_now = [_data,now]
@@ -424,21 +429,21 @@ graph_data['graphs'].each do |data_view|
                     end
                   end#polled entity for this job
                   manager.close
-                  warn "SNMPGraph: Sending Event:  #{this_graph['name']} min: #{lowest} "
+                  #warn "SNMPGraph: Sending Event:  #{this_graph['name']} min: #{_floor} ( #{lowest} * #{_num_invert}) "
                   if @bgcolor_enable
                     #I can't guarantee my current implementation will be accepted as a PR, so giving us
                     #an option to not use this
                     if _num_entities == _num_colors
-                      send_event(this_graph['name'], bgcolor: bgcolor, series: job_graphite, min: lowest, colors: _graph_colors)
+                      send_event(this_graph['name'], bgcolor: bgcolor, series: job_graphite, min: _floor, colors: _graph_colors)
                     else
                       #warn "SNMPGraph: #{this_graph['name']}: Got #{_num_colors} colors from yaml, but found #{_num_entities} elements. Not declaring colors. Colors assembled: #{_graph_colors}"
-                      send_event(this_graph['name'], bgcolor: bgcolor, series: job_graphite, min: lowest )
+                      send_event(this_graph['name'], bgcolor: bgcolor, series: job_graphite, min: _floor )
                     end
                   end
                   if _num_entities == _num_colors
-                    send_event(this_graph['name'], series: job_graphite, min: lowest, colors: _graph_colors)
+                    send_event(this_graph['name'], series: job_graphite, min: _floor, colors: _graph_colors)
                   else
-                    send_event(this_graph['name'], series: job_graphite, min: lowest )
+                    send_event(this_graph['name'], series: job_graphite, min: _floor )
                     #warn "SNMPGraph: #{this_graph['name']}: Got #{_num_colors} colors from yaml, but found #{_num_entities} elements. Not declaring colors. Colors assembled: #{_graph_colors}"
                   end
                 end#this graph job
