@@ -79,28 +79,33 @@ def counterToXps(last_count,last_unixtime,current_count,current_unixtime,output=
     case output
       #http://www.matisse.net/bitcalc/
     when 'bps', 'ticks'
-      xps_out = units.to_i
+      xps_out = units
     when 'kbps'
-      xps_out = (bitsTo(units,'kilobits')).to_i
+      xps_out = bitsTo(units,'kilobits')
     when 'mbps'
-      xps_out = (bitsTo(units,'megabites')).to_i
+      xps_out = bitsTo(units,'megabites')
     when 'Bps'
-      xps_out = (bitsTo(units,'bytes')).to_i
+      xps_out = bitsTo(units,'bytes')
     when 'kBps', 'KBps'
-      xps_out = (bitsTo(units,'kilobytes')).to_i
+      xps_out = bitsTo(units,'kilobytes')
     when 'mBps', 'MBps'
-      xps_out = (bitsTo(units,'megabytes')).to_i
+      xps_out = bitsTo(units,'megabytes')
     when 'gBps', 'GBps'
-      xps_out = (bitsTo(units,'gigabytes')).to_i
+      xps_out = bitsTo(units,'gigabytes')
     when 'gBps', 'GBps'
-      xps_out = (bitsTo(units,'terabytes')).to_i
+      xps_out = bitsTo(units,'terabytes')
     else
       warn "SNMPGraph: counterToXps: cannot convert #{units} to #{output}"
     end
     #warn "SNMPGraph counterToXps: octets: #{octets} seconds: #{seconds} bits: #{bits} bps: #{bps} #{output}: #{xps_out}"
   end
 #  warn "SNMPGraph: #{octets} #{bits} #{seconds} #{bps} #{xps_out}"
- xps_out
+#display as float if    > 0.1 and < 10
+if xps_out < 10  && xps_out > 0.1
+   xps_out.to_f
+ else
+   xps_out.to_i
+ end
 end
 
 def bytesTo(bytes,output='megabytes')
@@ -344,7 +349,7 @@ graph_data['graphs'].each do |data_view|
                         end
                         olddata.each do |val,time|
                           #warn "SNMPGraph: #{this_graph['name']}_#{_name}: val: #{val} lowest: #{lowest}"
-                          if val && val < lowest then
+                          if val && lowest && val < lowest then
                             instance_variable_set("@#{this_graph['name']}_lowest_val", val)
                             instance_variable_set("@#{this_graph['name']}_lowest_time", time)
                             lowest      = val
@@ -355,8 +360,8 @@ graph_data['graphs'].each do |data_view|
                           _data = -_pre_invert_data;
                           #we have to set the invert max so we can pass data-min
                           if instance_variable_defined?("@#{this_graph['name']}_lowest_val")
-                            lowest      = instance_variable_get("@#{this_graph['name']}_lowest_val")
-                            lowest_date = instance_variable_get("@#{this_graph['name']}_lowest_time")
+                            lowest      = instance_variable_defined?("@#{this_graph['name']}_lowest_val") ? instance_variable_get("@#{this_graph['name']}_lowest_val") : 0
+                            lowest_date = instance_variable_defined?("@#{this_graph['name']}_lowest_val") ? instance_variable_get("@#{this_graph['name']}_lowest_time") : now
                             if lowest_date == now
                               warn "SNMPGraph: #{this_graph['name']}_#{_name} current floor: #{lowest}"
                               #we are going to add our value to lowest, since we're another inverted value from the
@@ -367,7 +372,7 @@ graph_data['graphs'].each do |data_view|
                               _lowest = lowest
                             end
 
-                            if lowest > _lowest
+                            if lowest && lowest > _lowest
                               instance_variable_set("@#{this_graph['name']}_lowest_val", _lowest)
                               instance_variable_set("@#{this_graph['name']}_lowest_time", now)
                               lowest      = _lowest
@@ -419,7 +424,7 @@ graph_data['graphs'].each do |data_view|
                     end
                   end#polled entity for this job
                   manager.close
-                  #warn "SNMPGraph: Sending Event: job_graphite: #{this_graph['name']}  #{job_graphite}"
+                  warn "SNMPGraph: Sending Event:  #{this_graph['name']} min: #{lowest} "
                   if @bgcolor_enable
                     #I can't guarantee my current implementation will be accepted as a PR, so giving us
                     #an option to not use this
