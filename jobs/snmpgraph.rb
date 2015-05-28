@@ -36,8 +36,11 @@ end
 @snmpgraph_history_file=graph_data['history']['file']
 @snmpgraph_history_enable=graph_data['history']['enable']
 @snmpgraph_history_frequency=graph_data['history']['write_frequency']
-@bgcolor_enable=graph_data['graph_options']['bgcolor_enable']
-@bgcolor_default=graph_data['graph_options']['bgcolor']
+@snmpgraph_bgcolor_enable=graph_data['graph_options']['bgcolor_enable']
+@snmpgraph_bgcolor_default=graph_data['graph_options']['bgcolor']
+@snmpgraph_display_value_in_legend=graph_data['graph_options']['display-value-in-legend']
+@snmpgraph_data_title=graph_data['graph_options']['data-title']
+
 #warn "SNMPGraph: Graph Datafile: #{SNMPGRAPH_GRAPH_DATA_FILE}"
 #warn "SNMPGRAPH: Graph data: #{graph_data}"
 #warn "SNMPGraph: Poll interval: #{@snmpgraph_poll_interval}"
@@ -230,7 +233,8 @@ graph_data['graphs'].each do |data_view|
                     end
                   end
                 end
-                SCHEDULER.every "#{@snmpgraph_poll_interval}s", first_in: 0 do
+                _poll_interval = this_graph['interval'] ? this_graph['interval'] : @snmpgraph_poll_interval
+                SCHEDULER.every "#{_poll_interval}s", first_in: 0 do
                   #create the job
                   #warn "SNMPGraph: Starting job for #{this_graph['name']}"
                   job_graphite = []
@@ -239,7 +243,7 @@ graph_data['graphs'].each do |data_view|
                   if this_graph['bgcolor']
                     bgcolor = this_graph['bgcolor']
                   else
-                    bgcolor = @bgcolor_default
+                    bgcolor = @snmpgraph_bgcolor_default
                   end
                   _num_colors   = 0
                   _num_invert   = 0
@@ -430,7 +434,7 @@ graph_data['graphs'].each do |data_view|
                   end#polled entity for this job
                   manager.close
                   #warn "SNMPGraph: Sending Event:  #{this_graph['name']} min: #{_floor} ( #{lowest} * #{_num_invert}) "
-                  if @bgcolor_enable
+                  if @snmpgraph_bgcolor_enable
                     #I can't guarantee my current implementation will be accepted as a PR, so giving us
                     #an option to not use this
                     if _num_entities == _num_colors

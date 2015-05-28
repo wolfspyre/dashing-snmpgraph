@@ -13,6 +13,7 @@ graph_options:
   data-min: undef
   data-max: undef
   data-summary-method: 'highest'
+  display-value-in-legend: true
 graphs: []
 history:
   enable: true
