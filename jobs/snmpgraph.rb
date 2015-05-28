@@ -235,7 +235,7 @@ graph_data['graphs'].each do |data_view|
                 end
                 _poll_interval = this_graph['interval'] ? this_graph['interval'] : @snmpgraph_poll_interval
                 _data_title = this_graph['data-title'] ? this_graph['data-title'] : @snmpgraph_data_title
-                display_value_in_legend = this_graph['display-value-in-legend'] ? this_graph['display-value-in-legend'] : @snmpgraph_display_value_in_legend
+                _display_value_in_legend = this_graph['display-value-in-legend'] ? this_graph['display-value-in-legend'] : @snmpgraph_display_value_in_legend
                 SCHEDULER.every "#{_poll_interval}s", first_in: 0 do
                   #create the job
                   #warn "SNMPGraph: Starting job for #{this_graph['name']}"
