@@ -234,6 +234,8 @@ graph_data['graphs'].each do |data_view|
                   end
                 end
                 _poll_interval = this_graph['interval'] ? this_graph['interval'] : @snmpgraph_poll_interval
+                _data_title = this_graph['data-title'] ? this_graph['data-title'] : @snmpgraph_data_title
+                display_value_in_legend = this_graph['display-value-in-legend'] ? this_graph['display-value-in-legend'] : @snmpgraph_display_value_in_legend
                 SCHEDULER.every "#{_poll_interval}s", first_in: 0 do
                   #create the job
                   #warn "SNMPGraph: Starting job for #{this_graph['name']}"
@@ -266,6 +268,7 @@ graph_data['graphs'].each do |data_view|
                       #warn "SNMPGraph: #{this_graph['name']}: #{polled_entity[0]}"
                       _name    = polled_entity[0]
                       _oid     = polled_entity[1]['oid']
+
                       #TODO: work with jwalton to get this supported.
                       #if polled_entity[1]['renderer']
                       #  _renderer = polled_entity[1]['renderer']
@@ -273,6 +276,7 @@ graph_data['graphs'].each do |data_view|
                       #  #todo set default dynamically
                       #  _renderer = 'area'
                       #end
+
                       if polled_entity[1]['color'] and polled_entity[1]['color'] != 'undef'
                         _num_colors = _num_colors + 1
                         if _graph_colors.bytesize > 0
@@ -283,11 +287,13 @@ graph_data['graphs'].each do |data_view|
                       end
                       _rawdata = manager.get_value(_oid).to_i
                       #warn "SNMPGraph:  #{this_graph['name']}: #{_name} #{_oid} #{_rawdata}"
-                      if polled_entity[1]
-                        mode   = polled_entity[1]['mode']
-                      else
-                        mode   = 'default'
-                      end
+
+                      mode = ( polled_entity[1] || polled_entity[1]['mode'] ) ? polled_entity[1]['mode'] : 'default'
+#                      if polled_entity[1]
+#                        mode   = polled_entity[1]['mode']
+#                      else
+#                        mode   = 'default'
+#                      end
                       #store and convert if necessary for the mode and item.
                       case mode
                       when 'octets_to_Mbps', 'octets_to_Kbps', 'octets_to_bps', 'bits_per_second', 'bytes_per_second','ticks_per_second'
@@ -421,7 +427,7 @@ graph_data['graphs'].each do |data_view|
                       #warn "SNMPGraph: #{this_graph['name']}: #{this_graph['name']}_#{_name} _bar now: #{_bar}"
                       #warn "SNMPGraph: #{this_graph['name']}: #{this_graph['name']}_#{_name} _bar now: #{_bar.length} deep"
                       _entity_hash = Hash.new
-                      _entity_hash['target'] = "#{_name}: #{_pre_invert_data}"
+                      _entity_hash['target'] = _display_value_in_legend ? "#{_name}" : "#{_name}: #{_pre_invert_data}"
                       _entity_hash['datapoints'] = _foo
                       #TODO: Implement me
                       #_entity_hash['renderer'] = _renderer
