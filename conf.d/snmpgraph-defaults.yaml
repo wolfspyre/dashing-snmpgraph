@@ -4,6 +4,7 @@ polling_options:
 graph_options:
   bgcolor_enable: true
   bgcolor: '#0F8'
+  data-title: 'from_html'
   data-displayed-value: undef
   data-renderer: 'area'
   data-stroke: true

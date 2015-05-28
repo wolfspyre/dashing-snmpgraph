@@ -235,7 +235,7 @@ graph_data['graphs'].each do |data_view|
                 end
                 _poll_interval = this_graph['interval'] ? this_graph['interval'] : @snmpgraph_poll_interval
                 _data_title = this_graph['data-title'] ? this_graph['data-title'] : @snmpgraph_data_title
-                _display_value_in_legend = this_graph['display-value-in-legend'] ? this_graph['display-value-in-legend'] : @snmpgraph_display_value_in_legend
+                display_value_in_legend = this_graph['display-value-in-legend'].nil? ? @snmpgraph_display_value_in_legend : this_graph['display-value-in-legend']
                 SCHEDULER.every "#{_poll_interval}s", first_in: 0 do
                   #create the job
                   #warn "SNMPGraph: Starting job for #{this_graph['name']}"
@@ -277,6 +277,7 @@ graph_data['graphs'].each do |data_view|
                       #  _renderer = 'area'
                       #end
 
+
                       if polled_entity[1]['color'] and polled_entity[1]['color'] != 'undef'
                         _num_colors = _num_colors + 1
                         if _graph_colors.bytesize > 0
@@ -287,6 +288,13 @@ graph_data['graphs'].each do |data_view|
                       end
                       _rawdata = manager.get_value(_oid).to_i
                       #warn "SNMPGraph:  #{this_graph['name']}: #{_name} #{_oid} #{_rawdata}"
+
+                     if polled_entity[1]['display-value-in-legend'].nil?
+                       #not set here
+                       _display_value_in_legend = display_value_in_legend
+                     else
+                       _display_value_in_legend = polled_entity[1]['display-value-in-legend']
+                     end
 
                       mode = ( polled_entity[1] || polled_entity[1]['mode'] ) ? polled_entity[1]['mode'] : 'default'
 #                      if polled_entity[1]
@@ -427,7 +435,7 @@ graph_data['graphs'].each do |data_view|
                       #warn "SNMPGraph: #{this_graph['name']}: #{this_graph['name']}_#{_name} _bar now: #{_bar}"
                       #warn "SNMPGraph: #{this_graph['name']}: #{this_graph['name']}_#{_name} _bar now: #{_bar.length} deep"
                       _entity_hash = Hash.new
-                      _entity_hash['target'] = _display_value_in_legend ? "#{_name}" : "#{_name}: #{_pre_invert_data}"
+                      _entity_hash['target'] = _display_value_in_legend ? "#{_name}: #{_pre_invert_data}" : "#{_name}"
                       _entity_hash['datapoints'] = _foo
                       #TODO: Implement me
                       #_entity_hash['renderer'] = _renderer
