@@ -236,6 +236,7 @@ graph_data['graphs'].each do |data_view|
                 _poll_interval = this_graph['interval'] ? this_graph['interval'] : @snmpgraph_poll_interval
                 _data_title = this_graph['data-title'] ? this_graph['data-title'] : @snmpgraph_data_title
                 display_value_in_legend = this_graph['display-value-in-legend'].nil? ? @snmpgraph_display_value_in_legend : this_graph['display-value-in-legend']
+                #warn "SnmpGraph: #{this_graph['name']}: display_value_in_legend: #{display_value_in_legend} "
                 SCHEDULER.every "#{_poll_interval}s", first_in: 0 do
                   #create the job
                   #warn "SNMPGraph: Starting job for #{this_graph['name']}"
@@ -252,6 +253,7 @@ graph_data['graphs'].each do |data_view|
                   _floor        = 0
                   _graph_colors = ''
                   manager  = SNMP::Manager.new(:host => this_graph['address'], :community => this_graph['community'])
+                  #TODO: deal with this breaking
                   this_graph['entities'].each do |polled_entity|
                     #calculate how many inverted elements we have
                     #do this so we can approximate that the "floor" should be the lowest number recieved by any inverted
@@ -286,13 +288,17 @@ graph_data['graphs'].each do |data_view|
                           _graph_colors = "#{polled_entity[1]['color']}"
                         end
                       end
-                      _rawdata = manager.get_value(_oid).to_i
+                      _raw = manager.get_value(_oid)
+                      _rawdata = _raw ? _raw.to_i : 0
+
                       #warn "SNMPGraph:  #{this_graph['name']}: #{_name} #{_oid} #{_rawdata}"
 
                      if polled_entity[1]['display-value-in-legend'].nil?
                        #not set here
+                       #warn "SNMPGraph: #{this_graph['name']}: #{polled_entity[0]} display-value-in-legend .nil? is true"
                        _display_value_in_legend = display_value_in_legend
                      else
+                       #warn "SNMPGraph: #{this_graph['name']}: #{polled_entity[0]} display-value-in-legend has the value of #{polled_entity[1]['display-value-in-legend']}"
                        _display_value_in_legend = polled_entity[1]['display-value-in-legend']
                      end
 
@@ -435,7 +441,8 @@ graph_data['graphs'].each do |data_view|
                       #warn "SNMPGraph: #{this_graph['name']}: #{this_graph['name']}_#{_name} _bar now: #{_bar}"
                       #warn "SNMPGraph: #{this_graph['name']}: #{this_graph['name']}_#{_name} _bar now: #{_bar.length} deep"
                       _entity_hash = Hash.new
-                      _entity_hash['target'] = _display_value_in_legend ? "#{_name}: #{_pre_invert_data}" : "#{_name}"
+                      #warn "SNMPGraph: #{this_graph['name']}_#{_name}: display_value_in_legend: #{_display_value_in_legend}"
+                      _entity_hash['target'] = _display_value_in_legend == true ? "#{_name}: #{_pre_invert_data}" : "#{_name}"
                       _entity_hash['datapoints'] = _foo
                       #TODO: Implement me
                       #_entity_hash['renderer'] = _renderer
