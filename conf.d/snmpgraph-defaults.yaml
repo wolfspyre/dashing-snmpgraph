@@ -4,6 +4,7 @@ polling_options:
 graph_options:
   bgcolor_enable: true
   bgcolor: '#0F8'
+  data-title: 'from_html'
   data-displayed-value: undef
   data-renderer: 'area'
   data-stroke: true
@@ -13,6 +14,7 @@ graph_options:
   data-min: undef
   data-max: undef
   data-summary-method: 'highest'
+  display-value-in-legend: true
 graphs: []
 history:
   enable: true

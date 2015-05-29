@@ -36,8 +36,11 @@ end
 @snmpgraph_history_file=graph_data['history']['file']
 @snmpgraph_history_enable=graph_data['history']['enable']
 @snmpgraph_history_frequency=graph_data['history']['write_frequency']
-@bgcolor_enable=graph_data['graph_options']['bgcolor_enable']
-@bgcolor_default=graph_data['graph_options']['bgcolor']
+@snmpgraph_bgcolor_enable=graph_data['graph_options']['bgcolor_enable']
+@snmpgraph_bgcolor_default=graph_data['graph_options']['bgcolor']
+@snmpgraph_display_value_in_legend=graph_data['graph_options']['display-value-in-legend']
+@snmpgraph_data_title=graph_data['graph_options']['data-title']
+
 #warn "SNMPGraph: Graph Datafile: #{SNMPGRAPH_GRAPH_DATA_FILE}"
 #warn "SNMPGRAPH: Graph data: #{graph_data}"
 #warn "SNMPGraph: Poll interval: #{@snmpgraph_poll_interval}"
@@ -230,7 +233,11 @@ graph_data['graphs'].each do |data_view|
                     end
                   end
                 end
-                SCHEDULER.every "#{@snmpgraph_poll_interval}s", first_in: 0 do
+                _poll_interval = this_graph['interval'] ? this_graph['interval'] : @snmpgraph_poll_interval
+                _data_title = this_graph['data-title'] ? this_graph['data-title'] : @snmpgraph_data_title
+                display_value_in_legend = this_graph['display-value-in-legend'].nil? ? @snmpgraph_display_value_in_legend : this_graph['display-value-in-legend']
+                #warn "SnmpGraph: #{this_graph['name']}: display_value_in_legend: #{display_value_in_legend} "
+                SCHEDULER.every "#{_poll_interval}s", first_in: 0 do
                   #create the job
                   #warn "SNMPGraph: Starting job for #{this_graph['name']}"
                   job_graphite = []
@@ -239,13 +246,14 @@ graph_data['graphs'].each do |data_view|
                   if this_graph['bgcolor']
                     bgcolor = this_graph['bgcolor']
                   else
-                    bgcolor = @bgcolor_default
+                    bgcolor = @snmpgraph_bgcolor_default
                   end
                   _num_colors   = 0
                   _num_invert   = 0
                   _floor        = 0
                   _graph_colors = ''
                   manager  = SNMP::Manager.new(:host => this_graph['address'], :community => this_graph['community'])
+                  #TODO: deal with this breaking
                   this_graph['entities'].each do |polled_entity|
                     #calculate how many inverted elements we have
                     #do this so we can approximate that the "floor" should be the lowest number recieved by any inverted
@@ -262,6 +270,7 @@ graph_data['graphs'].each do |data_view|
                       #warn "SNMPGraph: #{this_graph['name']}: #{polled_entity[0]}"
                       _name    = polled_entity[0]
                       _oid     = polled_entity[1]['oid']
+
                       #TODO: work with jwalton to get this supported.
                       #if polled_entity[1]['renderer']
                       #  _renderer = polled_entity[1]['renderer']
@@ -269,6 +278,8 @@ graph_data['graphs'].each do |data_view|
                       #  #todo set default dynamically
                       #  _renderer = 'area'
                       #end
+
+
                       if polled_entity[1]['color'] and polled_entity[1]['color'] != 'undef'
                         _num_colors = _num_colors + 1
                         if _graph_colors.bytesize > 0
@@ -277,13 +288,26 @@ graph_data['graphs'].each do |data_view|
                           _graph_colors = "#{polled_entity[1]['color']}"
                         end
                       end
-                      _rawdata = manager.get_value(_oid).to_i
+                      _raw = manager.get_value(_oid)
+                      _rawdata = _raw ? _raw.to_i : 0
+
                       #warn "SNMPGraph:  #{this_graph['name']}: #{_name} #{_oid} #{_rawdata}"
-                      if polled_entity[1]
-                        mode   = polled_entity[1]['mode']
-                      else
-                        mode   = 'default'
-                      end
+
+                     if polled_entity[1]['display-value-in-legend'].nil?
+                       #not set here
+                       #warn "SNMPGraph: #{this_graph['name']}: #{polled_entity[0]} display-value-in-legend .nil? is true"
+                       _display_value_in_legend = display_value_in_legend
+                     else
+                       #warn "SNMPGraph: #{this_graph['name']}: #{polled_entity[0]} display-value-in-legend has the value of #{polled_entity[1]['display-value-in-legend']}"
+                       _display_value_in_legend = polled_entity[1]['display-value-in-legend']
+                     end
+
+                      mode = ( polled_entity[1] || polled_entity[1]['mode'] ) ? polled_entity[1]['mode'] : 'default'
+#                      if polled_entity[1]
+#                        mode   = polled_entity[1]['mode']
+#                      else
+#                        mode   = 'default'
+#                      end
                       #store and convert if necessary for the mode and item.
                       case mode
                       when 'octets_to_Mbps', 'octets_to_Kbps', 'octets_to_bps', 'bits_per_second', 'bytes_per_second','ticks_per_second'
@@ -417,7 +441,8 @@ graph_data['graphs'].each do |data_view|
                       #warn "SNMPGraph: #{this_graph['name']}: #{this_graph['name']}_#{_name} _bar now: #{_bar}"
                       #warn "SNMPGraph: #{this_graph['name']}: #{this_graph['name']}_#{_name} _bar now: #{_bar.length} deep"
                       _entity_hash = Hash.new
-                      _entity_hash['target'] = "#{_name}: #{_pre_invert_data}"
+                      #warn "SNMPGraph: #{this_graph['name']}_#{_name}: display_value_in_legend: #{_display_value_in_legend}"
+                      _entity_hash['target'] = _display_value_in_legend == true ? "#{_name}: #{_pre_invert_data}" : "#{_name}"
                       _entity_hash['datapoints'] = _foo
                       #TODO: Implement me
                       #_entity_hash['renderer'] = _renderer
@@ -430,7 +455,7 @@ graph_data['graphs'].each do |data_view|
                   end#polled entity for this job
                   manager.close
                   #warn "SNMPGraph: Sending Event:  #{this_graph['name']} min: #{_floor} ( #{lowest} * #{_num_invert}) "
-                  if @bgcolor_enable
+                  if @snmpgraph_bgcolor_enable
                     #I can't guarantee my current implementation will be accepted as a PR, so giving us
                     #an option to not use this
                     if _num_entities == _num_colors
