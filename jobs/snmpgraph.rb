@@ -288,9 +288,16 @@ graph_data['graphs'].each do |data_view|
                           _graph_colors = "#{polled_entity[1]['color']}"
                         end
                       end
-                      _raw = manager.get_value(_oid)
-                      _rawdata = _raw ? _raw.to_i : 0
 
+                      _raw = manager.get_value(_oid)
+                      begin
+                        _raw.to_i
+                      rescue
+                        warn "SNMPGraph:  #{this_graph['name']}: #{_name} #{_oid} failed somehow: #{_raw}. Setting output to 0"
+                        _raw = 0
+                      else
+                        _rawdata = _raw ? _raw.to_i : 0
+                      end
                       #warn "SNMPGraph:  #{this_graph['name']}: #{_name} #{_oid} #{_rawdata}"
 
                      if polled_entity[1]['display-value-in-legend'].nil?
