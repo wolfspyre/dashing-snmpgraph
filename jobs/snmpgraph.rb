@@ -237,6 +237,8 @@ graph_data['graphs'].each do |data_view|
                 _poll_interval = this_graph['interval'] ? this_graph['interval'] : @snmpgraph_poll_interval
                 _data_title = this_graph['data-title'] ? this_graph['data-title'] : @snmpgraph_data_title
                 display_value_in_legend = this_graph['display_value_in_legend'].nil? ? @snmpgraph_display_value_in_legend : this_graph['display_value_in_legend']
+                legend_value_format = this_graph['legend_value_format'].nil? ? @snmpgraph_legend_value_format : this_graph['legend_value_format']
+
                 #warn "SnmpGraph: #{this_graph['name']}: display_value_in_legend: #{display_value_in_legend} "
                 SCHEDULER.every "#{_poll_interval}s", first_in: 0 do
                   #create the job
@@ -306,8 +308,6 @@ graph_data['graphs'].each do |data_view|
                        #warn "SNMPGraph: #{this_graph['name']}: #{polled_entity[0]} display_value_in_legend has the value of #{polled_entity[1]['display_value_in_legend']}"
                        _display_value_in_legend = polled_entity[1]['display_value_in_legend']
                      end
-
-                     legend_value_format = this_graph['legend_value_format'] ? this_graph['legend_value_format'] : @snmpgraph_legend_value_format
 
 
                       mode = ( polled_entity[1] || polled_entity[1]['mode'] ) ? polled_entity[1]['mode'] : 'default'
@@ -450,7 +450,7 @@ graph_data['graphs'].each do |data_view|
                       #warn "SNMPGraph: #{this_graph['name']}: #{this_graph['name']}_#{_name} _bar now: #{_bar.length} deep"
                       _entity_hash = Hash.new
                       #warn "SNMPGraph: #{this_graph['name']}_#{_name}: display_value_in_legend: #{_display_value_in_legend}"
-                      if _display_value_in_legend == true do
+                      if _display_value_in_legend == true
                         case _legend_value_format
                         when 'default'
                           _legend_value = _pre_invert_data

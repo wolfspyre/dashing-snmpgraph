@@ -94,15 +94,16 @@ Here's an example minimal system yaml file.
           depth: 99
           bgcolor: '#9ad99b'
           entities:
-            Err_In:
-              oid: '1.3.6.1.2.1.2.2.1.14.2'
-              color: '#082B08'
+            Err_In: #visualize this interface's errors per second, but show total in legend
+              oid: '1.3.6.1.2.1.2.2.1.14.5'
               invert: false
-            Err_Out:
-              oid: '1.3.6.1.2.1.2.2.1.20.2'
-              color: '#186B19'
+              legend_value_format: 'total'
+              mode: 'ticks_per_second'
+            Err_Out: #visualize this interface's errors per second, but show total in legend
+              oid: '1.3.6.1.2.1.2.2.1.20.5'
               invert: true
-              mode: 'default'
+              legend_value_format: 'total'
+              mode: 'ticks_per_second'
             Kbps_Down:
               oid: '1.3.6.1.2.1.2.2.1.10.2'
               color: '#2DA62F'
