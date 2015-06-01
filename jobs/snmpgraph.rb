@@ -38,7 +38,8 @@ end
 @snmpgraph_history_frequency=graph_data['history']['write_frequency']
 @snmpgraph_bgcolor_enable=graph_data['graph_options']['bgcolor_enable']
 @snmpgraph_bgcolor_default=graph_data['graph_options']['bgcolor']
-@snmpgraph_display_value_in_legend=graph_data['graph_options']['display-value-in-legend']
+@snmpgraph_display_value_in_legend=graph_data['graph_options']['display_value_in_legend']
+@snmpgraph_legend_value_format=graph_data['graph_options']['legend_value_format']
 @snmpgraph_data_title=graph_data['graph_options']['data-title']
 
 #warn "SNMPGraph: Graph Datafile: #{SNMPGRAPH_GRAPH_DATA_FILE}"
@@ -235,7 +236,7 @@ graph_data['graphs'].each do |data_view|
                 end
                 _poll_interval = this_graph['interval'] ? this_graph['interval'] : @snmpgraph_poll_interval
                 _data_title = this_graph['data-title'] ? this_graph['data-title'] : @snmpgraph_data_title
-                display_value_in_legend = this_graph['display-value-in-legend'].nil? ? @snmpgraph_display_value_in_legend : this_graph['display-value-in-legend']
+                display_value_in_legend = this_graph['display_value_in_legend'].nil? ? @snmpgraph_display_value_in_legend : this_graph['display_value_in_legend']
                 #warn "SnmpGraph: #{this_graph['name']}: display_value_in_legend: #{display_value_in_legend} "
                 SCHEDULER.every "#{_poll_interval}s", first_in: 0 do
                   #create the job
@@ -243,11 +244,7 @@ graph_data['graphs'].each do |data_view|
                   job_graphite = []
                   lowest   = 0
                   now      = Time.now.to_i
-                  if this_graph['bgcolor']
-                    bgcolor = this_graph['bgcolor']
-                  else
-                    bgcolor = @snmpgraph_bgcolor_default
-                  end
+                  bgcolor = this_graph['bgcolor'] ? this_graph['bgcolor'] : @snmpgraph_bgcolor_default
                   _num_colors   = 0
                   _num_invert   = 0
                   _floor        = 0
@@ -268,8 +265,9 @@ graph_data['graphs'].each do |data_view|
                     warn "SNMPGraph: #{this_graph['name']}: #{polled_entity[0]} Skipping. no OID found."
                     else
                       #warn "SNMPGraph: #{this_graph['name']}: #{polled_entity[0]}"
-                      _name    = polled_entity[0]
-                      _oid     = polled_entity[1]['oid']
+                      _name                = polled_entity[0]
+                      _oid                 = polled_entity[1]['oid']
+                      _legend_value_format = polled_entity[1]['legend_value_format'] ? polled_entity[1]['legend_value_format'] : legend_value_format
 
                       #TODO: work with jwalton to get this supported.
                       #if polled_entity[1]['renderer']
@@ -300,14 +298,17 @@ graph_data['graphs'].each do |data_view|
                       end
                       #warn "SNMPGraph:  #{this_graph['name']}: #{_name} #{_oid} #{_rawdata}"
 
-                     if polled_entity[1]['display-value-in-legend'].nil?
+                     if polled_entity[1]['display_value_in_legend'].nil?
                        #not set here
-                       #warn "SNMPGraph: #{this_graph['name']}: #{polled_entity[0]} display-value-in-legend .nil? is true"
+                       #warn "SNMPGraph: #{this_graph['name']}: #{polled_entity[0]} display_value_in_legend .nil? is true"
                        _display_value_in_legend = display_value_in_legend
                      else
-                       #warn "SNMPGraph: #{this_graph['name']}: #{polled_entity[0]} display-value-in-legend has the value of #{polled_entity[1]['display-value-in-legend']}"
-                       _display_value_in_legend = polled_entity[1]['display-value-in-legend']
+                       #warn "SNMPGraph: #{this_graph['name']}: #{polled_entity[0]} display_value_in_legend has the value of #{polled_entity[1]['display_value_in_legend']}"
+                       _display_value_in_legend = polled_entity[1]['display_value_in_legend']
                      end
+
+                     legend_value_format = this_graph['legend_value_format'] ? this_graph['legend_value_format'] : @snmpgraph_legend_value_format
+
 
                       mode = ( polled_entity[1] || polled_entity[1]['mode'] ) ? polled_entity[1]['mode'] : 'default'
 #                      if polled_entity[1]
@@ -449,7 +450,20 @@ graph_data['graphs'].each do |data_view|
                       #warn "SNMPGraph: #{this_graph['name']}: #{this_graph['name']}_#{_name} _bar now: #{_bar.length} deep"
                       _entity_hash = Hash.new
                       #warn "SNMPGraph: #{this_graph['name']}_#{_name}: display_value_in_legend: #{_display_value_in_legend}"
-                      _entity_hash['target'] = _display_value_in_legend == true ? "#{_name}: #{_pre_invert_data}" : "#{_name}"
+                      if _display_value_in_legend == true do
+                        case _legend_value_format
+                        when 'default'
+                          _legend_value = _pre_invert_data
+                        when 'total'
+                          _legend_value = _rawdata
+                        else
+                          warn "SNMPGraph: #{this_graph['name']}: #{this_graph['name']}_#{_name} Unsupported value for legend_value_format. Got '#{_legend_value_format}'. Falling back to default."
+                          _legend_value = _pre_invert_data
+                        end
+                        _entity_hash['target'] = "#{_name}: #{_legend_value}"
+                      else
+                        _entity_hash['target'] = "#{_name}"
+                      end
                       _entity_hash['datapoints'] = _foo
                       #TODO: Implement me
                       #_entity_hash['renderer'] = _renderer

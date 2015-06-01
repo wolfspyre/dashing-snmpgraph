@@ -55,7 +55,11 @@ The sub attributes of your graph are as follows:
   - `community`  - The SNMP community to use when polling.
   - `connection` - What version of the SNMP protocol to use. `v2c` is recommended.
   - `depth`      - The number of elements to cap the timeseries array at. There seems to be a limit of 99. I am uncertain of why this is at this time.
-  - `display-value-in-legend` - Whether or not to display the last value as well as the name in the legend. This may be enabled at a graph level, or an element level.
+  - `display_value_in_legend` - Whether or not to display the last value as well as the name in the legend. This may be enabled at a graph level, or an element level.
+  - `legend_value_format` - How to display the value in the legend.
+    - Supported options:
+      - *default* - Will display the same value that is being graphed. Datasources which are being represented inverted visually will not be negative numbers.
+      - *total* - Will display the last collected value, even if the visualization of the data is in things per second. Useful for interface errors, or other datasources where you'd like to visualize things per second, but be able to see the total.
   - `bgcolor`    - **experimental** This is only functional with my fork of jwalton's module. I am not certain that it should remain in it's current implementation, and may be removed.
   - `entities`  - A Hash of oids you're going to poll:
 The first element will be the nice name of the thing you are graphing. This will be displayed in the graph legend (if it is enabled)
