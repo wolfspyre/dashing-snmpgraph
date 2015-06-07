@@ -115,23 +115,23 @@ end
 def bytesTo(bytes,output='megabytes')
   case output
   when 'bits','units'
-    _bytesToOutput = (bytes*8)
+    _bytesToOutput = bytes ? (bytes*8) : 0
   when 'kilobytes'
-    _bytesToOutput = (bytes/1000)
+    _bytesToOutput = bytes ? (bytes/1000) : 0
   when 'kilobits'
-    _bytesToOutput = ((bytes/1000)*8)
+    _bytesToOutput = bytes ? ((bytes/1000)*8) : 0
   when 'megabytes'
-    _bytesToOutput = (bytes/1000000)
+    _bytesToOutput = bytes ? (bytes/1000000) : 0
   when 'megabits'
-    _bytesToOutput = ((bytes/1000000)*8)
+    _bytesToOutput = bytes ? ((bytes/1000000)*8) : 0
   when 'gigabytes'
-    _bytesToOutput = (bytes/1000000000)
+    _bytesToOutput = bytes ? (bytes/1000000000) : 0
   when 'gigabits'
-      _bytesToOutput = ((bytes/1000000000)*8)
+    _bytesToOutput = bytes ? ((bytes/1000000000)*8) : 0
   when 'terabytes'
-    _bytesToOutput = (bytes/1000000000000)
+    _bytesToOutput = bytes ? (bytes/1000000000000) : 0
   when 'terabytes'
-    _bytesToOutput = ((bytes/1000000000000)*8)
+    _bytesToOutput = bytes ? ((bytes/1000000000000)*8) : 0
   end
   _bytesToOutput
 end
@@ -139,23 +139,23 @@ end
 def bitsTo(bits,output='megabit')
   case output
   when 'bytes'
-    _bitsToOutput = (bits/8)
+    _bitsToOutput = bits ? (bits/8) : 0
   when 'kilobits'
-    _bitsToOutput = (bits/1000)
+    _bitsToOutput = bits ? (bits/1000) : 0
   when 'kilobytes'
-    _bitsToOutput = ((bits/1000)/8)
+    _bitsToOutput = bits ? ((bits/1000)/8) : 0
   when 'megabits'
-    _bitsToOutput = (bits/1000000)
+    _bitsToOutput = bits ? (bits/1000000) : 0
   when 'megabytes'
-    _bitsToOutput = ((bits/1000000)/8)
+    _bitsToOutput = bits ? ((bits/1000000)/8) : 0
   when 'gigabits'
-    _bitsToOutput = (bits/1000000000)
+    _bitsToOutput = bits ? (bits/1000000000) : 0
   when 'gigabytes'
-    _bitsToOutput = ((bits/1000000000)/8)
+    _bitsToOutput = bits ? ((bits/1000000000)/8) : 0
   when 'terabits'
-    _bitsToOutput = (bits/1000000000000)
+    _bitsToOutput = bits ? (bits/1000000000000) : 0
   when 'terabytes'
-    _bitsToOutput = ((bits/1000000000000)/8)
+    _bitsToOutput = bits ? ((bits/1000000000000)/8) : 0
   end
   _bitsToOutput
 end
