@@ -54,7 +54,19 @@ def counterToXps(last_count,last_unixtime,current_count,current_unixtime,output=
   if last_unixtime == current_unixtime
     xps_out = 0
   else
-    count  = current_count - last_count
+    if current_count && last_count
+      count  = current_count - last_count
+    else
+      if current_count.nil?
+        niller='current_count'
+      elsif last_count.nil?
+        niller='last_count'
+      else
+        niller="current_count: #{current_count} last_count: #{last_count}"
+      end
+      warn "SNMPGraph: counterToXps: setting count to 0, as #{niller} is nil"
+      count = 0
+    end
     seconds = current_unixtime - last_unixtime
     #warn "SNMPGraph: counterToXps: count: #{count} Seconds: #{seconds}"
     #octets (bytes) -> bits
