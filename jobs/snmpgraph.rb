@@ -263,229 +263,236 @@ graph_data['graphs'].each do |data_view|
                   _num_invert   = 0
                   _floor        = 0
                   _graph_colors = ''
-                  manager  = SNMP::Manager.new(:host => this_graph['address'], :community => this_graph['community'])
-                  #TODO: deal with this breaking
-                  this_graph['entities'].each do |polled_entity|
-                    #calculate how many inverted elements we have
-                    #do this so we can approximate that the "floor" should be the lowest number recieved by any inverted
-                    #data sources multiplied by the number of inverted data sources.
-                    if polled_entity[1]['invert']
-                      _num_invert = _num_invert +1
+                  begin
+                    manager  = SNMP::Manager.new(:host => this_graph['address'], :community => this_graph['community'], :timeout => 1, :retries => 2 )
+                  rescue
+                    warn "SNMPGraph: #{this_graph['name']}: Host unavailable"
+                    send_event(this_graph['name'], title: 'host unreachable')
+                  else
+
+                    #TODO: deal with this breaking
+                    this_graph['entities'].each do |polled_entity|
+                      #calculate how many inverted elements we have
+                      #do this so we can approximate that the "floor" should be the lowest number recieved by any inverted
+                      #data sources multiplied by the number of inverted data sources.
+                      if polled_entity[1]['invert']
+                        _num_invert = _num_invert +1
+                      end
                     end
-                  end
-                  #warn "SNMPGraph: #{this_graph['name']}: inverted data sources: #{_num_invert}"
-                  this_graph['entities'].each do |polled_entity|
-                    if !polled_entity[1]['oid']
-                    warn "SNMPGraph: #{this_graph['name']}: #{polled_entity[0]} Skipping. no OID found."
-                    else
-                      #warn "SNMPGraph: #{this_graph['name']}: #{polled_entity[0]}"
-                      _name                = polled_entity[0]
-                      _oid                 = polled_entity[1]['oid']
-                      _legend_value_format = polled_entity[1]['legend_value_format'] ? polled_entity[1]['legend_value_format'] : legend_value_format
-
-                      #TODO: work with jwalton to get this supported.
-                      #if polled_entity[1]['renderer']
-                      #  _renderer = polled_entity[1]['renderer']
-                      #else
-                      #  #todo set default dynamically
-                      #  _renderer = 'area'
-                      #end
-
-
-                      if polled_entity[1]['color'] and polled_entity[1]['color'] != 'undef'
-                        _num_colors = _num_colors + 1
-                        if _graph_colors.bytesize > 0
-                          _graph_colors = "#{_graph_colors}:#{polled_entity[1]['color']}"
-                        else
-                          _graph_colors = "#{polled_entity[1]['color']}"
-                        end
-                      end
-
-                      _raw = manager.get_value(_oid)
-                      begin
-                        _raw.to_i
-                      rescue
-                        warn "SNMPGraph:  #{this_graph['name']}: #{_name} #{_oid} failed somehow: #{_raw}. Setting output to 0"
-                        _raw = 0
+                    #warn "SNMPGraph: #{this_graph['name']}: inverted data sources: #{_num_invert}"
+                    this_graph['entities'].each do |polled_entity|
+                      if !polled_entity[1]['oid']
+                      warn "SNMPGraph: #{this_graph['name']}: #{polled_entity[0]} Skipping. no OID found."
                       else
-                        _rawdata = _raw ? _raw.to_i : 0
-                      end
-                      #warn "SNMPGraph:  #{this_graph['name']}: #{_name} #{_oid} #{_rawdata}"
+                        #warn "SNMPGraph: #{this_graph['name']}: #{polled_entity[0]}"
+                        _name                = polled_entity[0]
+                        _oid                 = polled_entity[1]['oid']
+                        _legend_value_format = polled_entity[1]['legend_value_format'] ? polled_entity[1]['legend_value_format'] : legend_value_format
 
-                     if polled_entity[1]['display_value_in_legend'].nil?
-                       #not set here
-                       #warn "SNMPGraph: #{this_graph['name']}: #{polled_entity[0]} display_value_in_legend .nil? is true"
-                       _display_value_in_legend = display_value_in_legend
-                     else
-                       #warn "SNMPGraph: #{this_graph['name']}: #{polled_entity[0]} display_value_in_legend has the value of #{polled_entity[1]['display_value_in_legend']}"
-                       _display_value_in_legend = polled_entity[1]['display_value_in_legend']
-                     end
+                        #TODO: work with jwalton to get this supported.
+                        #if polled_entity[1]['renderer']
+                        #  _renderer = polled_entity[1]['renderer']
+                        #else
+                        #  #todo set default dynamically
+                        #  _renderer = 'area'
+                        #end
 
 
-                      mode = ( polled_entity[1] || polled_entity[1]['mode'] ) ? polled_entity[1]['mode'] : 'default'
-#                      if polled_entity[1]
-#                        mode   = polled_entity[1]['mode']
-#                      else
-#                        mode   = 'default'
-#                      end
-                      #store and convert if necessary for the mode and item.
-                      case mode
-                      when 'octets_to_Mbps', 'octets_to_Kbps', 'octets_to_bps', 'bits_per_second', 'bytes_per_second','ticks_per_second'
-                        case mode
-                        when 'octets_to_Mbps'
-                          _output='mbps'
-                          _input = 'octets'
-                        when 'octets_to_Kbps'
-                          _output='kbps'
-                          _input = 'octets'
-                        when 'octets_to_bps'
-                          _output='bps'
-                          _input = 'octets'
-                        when 'bits_per_second'
-                          _output = 'bps'
-                          _input = 'bits'
-                          #we have to convert bits to bytes to use our
-                        when 'bytes_per_second'
-                          _output = 'Bps'
-                          _input = 'octets'
-                        when 'ticks_per_second'
-                          _output = 'ticks'
-                          _input = 'ticks'
-                        end
-                        #we need to fetch the last timeseries data so that we can
-                        #calculate Mbps from octets
-                        if instance_variable_defined?("@#{this_graph['name']}_#{_name}_last")
-                          last = instance_variable_get("@#{this_graph['name']}_#{_name}_last")
-                          olddata = instance_variable_get("@#{this_graph['name']}_#{_name}_datapoints")
-                          if !olddata.empty? && olddata.last[1]
-                            lasttime = olddata.last[1]
+                        if polled_entity[1]['color'] and polled_entity[1]['color'] != 'undef'
+                          _num_colors = _num_colors + 1
+                          if _graph_colors.bytesize > 0
+                            _graph_colors = "#{_graph_colors}:#{polled_entity[1]['color']}"
                           else
-                            #warn "SnmpGraph: #{this_graph['name']}_#{_name}: Couldn't fetch lasttime. using #{now}"
+                            _graph_colors = "#{polled_entity[1]['color']}"
+                          end
+                        end
+
+                        begin
+                          _raw = manager ? manager.get_value(_oid) : 0
+                          _raw.to_i
+                        rescue
+                          warn "SNMPGraph:  #{this_graph['name']}: #{_name} #{_oid} failed somehow: #{_raw}. Setting output to 0"
+                          _raw = 0
+                        else
+                          _rawdata = _raw ? _raw.to_i : 0
+                        end
+                        #warn "SNMPGraph:  #{this_graph['name']}: #{_name} #{_oid} #{_rawdata}"
+
+                       if polled_entity[1]['display_value_in_legend'].nil?
+                         #not set here
+                         #warn "SNMPGraph: #{this_graph['name']}: #{polled_entity[0]} display_value_in_legend .nil? is true"
+                         _display_value_in_legend = display_value_in_legend
+                       else
+                         #warn "SNMPGraph: #{this_graph['name']}: #{polled_entity[0]} display_value_in_legend has the value of #{polled_entity[1]['display_value_in_legend']}"
+                         _display_value_in_legend = polled_entity[1]['display_value_in_legend']
+                       end
+
+
+                        mode = ( polled_entity[1] || polled_entity[1]['mode'] ) ? polled_entity[1]['mode'] : 'default'
+  #                      if polled_entity[1]
+  #                        mode   = polled_entity[1]['mode']
+  #                      else
+  #                        mode   = 'default'
+  #                      end
+                        #store and convert if necessary for the mode and item.
+                        case mode
+                        when 'octets_to_Mbps', 'octets_to_Kbps', 'octets_to_bps', 'bits_per_second', 'bytes_per_second','ticks_per_second'
+                          case mode
+                          when 'octets_to_Mbps'
+                            _output='mbps'
+                            _input = 'octets'
+                          when 'octets_to_Kbps'
+                            _output='kbps'
+                            _input = 'octets'
+                          when 'octets_to_bps'
+                            _output='bps'
+                            _input = 'octets'
+                          when 'bits_per_second'
+                            _output = 'bps'
+                            _input = 'bits'
+                            #we have to convert bits to bytes to use our
+                          when 'bytes_per_second'
+                            _output = 'Bps'
+                            _input = 'octets'
+                          when 'ticks_per_second'
+                            _output = 'ticks'
+                            _input = 'ticks'
+                          end
+                          #we need to fetch the last timeseries data so that we can
+                          #calculate Mbps from octets
+                          if instance_variable_defined?("@#{this_graph['name']}_#{_name}_last")
+                            last = instance_variable_get("@#{this_graph['name']}_#{_name}_last")
+                            olddata = instance_variable_get("@#{this_graph['name']}_#{_name}_datapoints")
+                            if !olddata.empty? && olddata.last[1]
+                              lasttime = olddata.last[1]
+                            else
+                              #warn "SnmpGraph: #{this_graph['name']}_#{_name}: Couldn't fetch lasttime. using #{now}"
+                              lasttime = now
+                            end
+                            #warn "SnmpGraph: Setting #{this_graph['name']}_#{_name}_last to #{_rawdata}. Was #{last}"
+                            instance_variable_set("@#{this_graph['name']}_#{_name}_last", _rawdata)
+                          else
+                            #warn "SnmpGraph: #{this_graph['name']}_#{_name}: #{this_graph['name']}_#{_name}_last not set. Setting this datapoint to current"
+                            instance_variable_set("@#{this_graph['name']}_#{_name}_last", _rawdata)
+                            last = _rawdata
                             lasttime = now
                           end
-                          #warn "SnmpGraph: Setting #{this_graph['name']}_#{_name}_last to #{_rawdata}. Was #{last}"
-                          instance_variable_set("@#{this_graph['name']}_#{_name}_last", _rawdata)
-                        else
-                          #warn "SnmpGraph: #{this_graph['name']}_#{_name}: #{this_graph['name']}_#{_name}_last not set. Setting this datapoint to current"
-                          instance_variable_set("@#{this_graph['name']}_#{_name}_last", _rawdata)
-                          last = _rawdata
-                          lasttime = now
-                        end
-                        #warn "SnmpGraph: #{this_graph['name']}_#{_name}: Last: #{last} LastTime: #{lasttime} Current: #{_rawdata}, now: #{now}"
-                        case mode
-                        when  'octets_to_Mbps', 'octets_to_Kbps', 'octets_to_bps','ticks_per_second'
-                          #we should call counterToXps here
-                          _pre_invert_data = counterToXps(last,lasttime,_rawdata,now,_output,_input)
-                        #_data = counterToXps(last,lasttime,_rawdata,now,_output)
-                        end
-                      when 'bytes_to_MB', 'bytes_to_kB', 'bytes_to_megabytes', 'bytes_to_kilobytes'
-                        case mode
-                        when 'bytes_to_MB', 'bytes_to_megabytes'
-                          _pre_invert_data = bytesTo(_rawdata,'megabytes')
-                          #warn "SnmpGraph: #{this_graph['name']}_#{_name} bytes_to_MB: Current: #{_rawdata} _pre_invert_data: #{_pre_invert_data} now: #{now}"
-                        when 'bytes_to_kB', 'bytes_to_kilobytes'
-                          _pre_invert_data = bytesTo(_rawdata,'kilobytes')
-                          #warn "SnmpGraph: #{this_graph['name']}_#{_name} bytes_to_kB: Current: #{_rawdata} _pre_invert_data: #{_pre_invert_data} now: #{now}"
-                        end
-                      when 'default'
-                        _pre_invert_data = _rawdata
-                      else
-                        _pre_invert_data = _rawdata
-                      end
-                      if polled_entity[1]['invert']
-                        #figure out the floor
-                        olddata = instance_variable_get("@#{this_graph['name']}_#{_name}_datapoints")
-                        if instance_variable_defined?("@#{this_graph['name']}_lowest_val")
-                          lowest      = instance_variable_get("@#{this_graph['name']}_lowest_val")
-                          lowest_date = instance_variable_get("@#{this_graph['name']}_lowest_time")
-                        else
-                          lowest = 0
-                          lowest_date = 0
-                        end
-                        olddata.each do |val,time|
-                          #warn "SNMPGraph: #{this_graph['name']}_#{_name}: val: #{val} lowest: #{lowest}"
-                          if val && lowest && val < lowest then
-                            instance_variable_set("@#{this_graph['name']}_lowest_val", val)
-                            instance_variable_set("@#{this_graph['name']}_lowest_time", time)
-                            lowest      = val
-                            lowest_date = time
+                          #warn "SnmpGraph: #{this_graph['name']}_#{_name}: Last: #{last} LastTime: #{lasttime} Current: #{_rawdata}, now: #{now}"
+                          case mode
+                          when  'octets_to_Mbps', 'octets_to_Kbps', 'octets_to_bps','ticks_per_second'
+                            #we should call counterToXps here
+                            _pre_invert_data = counterToXps(last,lasttime,_rawdata,now,_output,_input)
+                          #_data = counterToXps(last,lasttime,_rawdata,now,_output)
                           end
+                        when 'bytes_to_MB', 'bytes_to_kB', 'bytes_to_megabytes', 'bytes_to_kilobytes'
+                          case mode
+                          when 'bytes_to_MB', 'bytes_to_megabytes'
+                            _pre_invert_data = bytesTo(_rawdata,'megabytes')
+                            #warn "SnmpGraph: #{this_graph['name']}_#{_name} bytes_to_MB: Current: #{_rawdata} _pre_invert_data: #{_pre_invert_data} now: #{now}"
+                          when 'bytes_to_kB', 'bytes_to_kilobytes'
+                            _pre_invert_data = bytesTo(_rawdata,'kilobytes')
+                            #warn "SnmpGraph: #{this_graph['name']}_#{_name} bytes_to_kB: Current: #{_rawdata} _pre_invert_data: #{_pre_invert_data} now: #{now}"
+                          end
+                        when 'default'
+                          _pre_invert_data = _rawdata
+                        else
+                          _pre_invert_data = _rawdata
                         end
-                        if _pre_invert_data > 0 then
-                          _data = -_pre_invert_data;
-                          #we have to set the invert max so we can pass data-min
+                        if polled_entity[1]['invert']
+                          #figure out the floor
+                          olddata = instance_variable_get("@#{this_graph['name']}_#{_name}_datapoints")
                           if instance_variable_defined?("@#{this_graph['name']}_lowest_val")
-                            lowest      = instance_variable_defined?("@#{this_graph['name']}_lowest_val") ? instance_variable_get("@#{this_graph['name']}_lowest_val") : 0
-                            lowest_date = instance_variable_defined?("@#{this_graph['name']}_lowest_val") ? instance_variable_get("@#{this_graph['name']}_lowest_time") : now
-                            if lowest && lowest > _data
-                              instance_variable_set("@#{this_graph['name']}_lowest_val", _data)
-                              instance_variable_set("@#{this_graph['name']}_lowest_time", now)
+                            lowest      = instance_variable_get("@#{this_graph['name']}_lowest_val")
+                            lowest_date = instance_variable_get("@#{this_graph['name']}_lowest_time")
+                          else
+                            lowest = 0
+                            lowest_date = 0
+                          end
+                          olddata.each do |val,time|
+                            #warn "SNMPGraph: #{this_graph['name']}_#{_name}: val: #{val} lowest: #{lowest}"
+                            if val && lowest && val < lowest then
+                              instance_variable_set("@#{this_graph['name']}_lowest_val", val)
+                              instance_variable_set("@#{this_graph['name']}_lowest_time", time)
+                              lowest      = val
+                              lowest_date = time
+                            end
+                          end
+                          if _pre_invert_data > 0 then
+                            _data = -_pre_invert_data;
+                            #we have to set the invert max so we can pass data-min
+                            if instance_variable_defined?("@#{this_graph['name']}_lowest_val")
+                              lowest      = instance_variable_defined?("@#{this_graph['name']}_lowest_val") ? instance_variable_get("@#{this_graph['name']}_lowest_val") : 0
+                              lowest_date = instance_variable_defined?("@#{this_graph['name']}_lowest_val") ? instance_variable_get("@#{this_graph['name']}_lowest_time") : now
+                              if lowest && lowest > _data
+                                instance_variable_set("@#{this_graph['name']}_lowest_val", _data)
+                                instance_variable_set("@#{this_graph['name']}_lowest_time", now)
+                                lowest      = _data
+                                lowest_date = now
+                              end
+                            else
                               lowest      = _data
                               lowest_date = now
+                              instance_variable_set("@#{this_graph['name']}_lowest_val", lowest)
+                              instance_variable_set("@#{this_graph['name']}_lowest_time", now)
                             end
                           else
-                            lowest      = _data
-                            lowest_date = now
-                            instance_variable_set("@#{this_graph['name']}_lowest_val", lowest)
-                            instance_variable_set("@#{this_graph['name']}_lowest_time", now)
+                            _data = _pre_invert_data
                           end
                         else
                           _data = _pre_invert_data
                         end
-                      else
-                        _data = _pre_invert_data
-                      end
-                      if _num_invert > 0
-                        lowest = instance_variable_defined?("@#{this_graph['name']}_lowest_val") ? instance_variable_get("@#{this_graph['name']}_lowest_val") : 0
-                        #it's unlikely that all inverted entities are likely to be the peak lowest value
-                        # assuming that the average is 75%. This is arbitrary
-                        _floor = ((lowest * _num_invert) * 0.75)
-                      else
-                        #we have no inverted elements. Floor should be 0
-                        _floor = 0
-                      end
-                      #warn "SnmpGraph: #{this_graph['name']}_#{_name}: Current: #{_data}, now: #{now} lowest: #{lowest}"
-                      job_now = [_data,now]
-                      #warn "SNMPGraph: #{this_graph['name']}: #{now} Name: #{_name} OID: #{_oid} Value: #{_data} job_now: #{job_now} "
-                      _foo = instance_variable_get("@#{this_graph['name']}_#{_name}_datapoints")
-                      #warn "SNMPGraph: #{this_graph['name']}: #{this_graph['name']}_#{_name} _foo set: #{_foo}"
-                      if _foo.length >= @snmpgraph_graph_depth.to_i
-                        #warn "SNMPGraph: #{this_graph['name']}_#{_name}_datapoints: graph_depth reached (#{_foo.length}). Dropping"
-                        _foo = _foo.drop(_foo.length - @snmpgraph_graph_depth.to_i + 1)
-                        #warn "SNMPGraph: #{this_graph['name']}_#{_name}_datapoints: graph_depth now (#{_foo.length})."
-                      end
-                      _foo << job_now
-                      #warn "SNMPGraph: #{this_graph['name']}: #{this_graph['name']}_#{_name} _foo appended: #{_foo}"
-                      instance_variable_set("@#{this_graph['name']}_#{_name}_datapoints", _foo)
-                      #_bar = instance_variable_get("@#{this_graph['name']}_#{_name}_datapoints")
-                      #warn "SNMPGraph: #{this_graph['name']}: #{this_graph['name']}_#{_name} _bar now: #{_bar}"
-                      #warn "SNMPGraph: #{this_graph['name']}: #{this_graph['name']}_#{_name} _bar now: #{_bar.length} deep"
-                      _entity_hash = Hash.new
-                      #warn "SNMPGraph: #{this_graph['name']}_#{_name}: display_value_in_legend: #{_display_value_in_legend}"
-                      if _display_value_in_legend == true
-                        case _legend_value_format
-                        when 'default'
-                          _legend_value = _pre_invert_data
-                        when 'total'
-                          _legend_value = _rawdata
+                        if _num_invert > 0
+                          lowest = instance_variable_defined?("@#{this_graph['name']}_lowest_val") ? instance_variable_get("@#{this_graph['name']}_lowest_val") : 0
+                          #it's unlikely that all inverted entities are likely to be the peak lowest value
+                          # assuming that the average is 75%. This is arbitrary
+                          _floor = ((lowest * _num_invert) * 0.75)
                         else
-                          warn "SNMPGraph: #{this_graph['name']}: #{this_graph['name']}_#{_name} Unsupported value for legend_value_format. Got '#{_legend_value_format}'. Falling back to default."
-                          _legend_value = _pre_invert_data
+                          #we have no inverted elements. Floor should be 0
+                          _floor = 0
                         end
-                        _entity_hash['target'] = "#{_name}: #{_legend_value}"
-                      else
-                        _entity_hash['target'] = "#{_name}"
+                        #warn "SnmpGraph: #{this_graph['name']}_#{_name}: Current: #{_data}, now: #{now} lowest: #{lowest}"
+                        job_now = [_data,now]
+                        #warn "SNMPGraph: #{this_graph['name']}: #{now} Name: #{_name} OID: #{_oid} Value: #{_data} job_now: #{job_now} "
+                        _foo = instance_variable_get("@#{this_graph['name']}_#{_name}_datapoints")
+                        #warn "SNMPGraph: #{this_graph['name']}: #{this_graph['name']}_#{_name} _foo set: #{_foo}"
+                        if _foo.length >= @snmpgraph_graph_depth.to_i
+                          #warn "SNMPGraph: #{this_graph['name']}_#{_name}_datapoints: graph_depth reached (#{_foo.length}). Dropping"
+                          _foo = _foo.drop(_foo.length - @snmpgraph_graph_depth.to_i + 1)
+                          #warn "SNMPGraph: #{this_graph['name']}_#{_name}_datapoints: graph_depth now (#{_foo.length})."
+                        end
+                        _foo << job_now
+                        #warn "SNMPGraph: #{this_graph['name']}: #{this_graph['name']}_#{_name} _foo appended: #{_foo}"
+                        instance_variable_set("@#{this_graph['name']}_#{_name}_datapoints", _foo)
+                        #_bar = instance_variable_get("@#{this_graph['name']}_#{_name}_datapoints")
+                        #warn "SNMPGraph: #{this_graph['name']}: #{this_graph['name']}_#{_name} _bar now: #{_bar}"
+                        #warn "SNMPGraph: #{this_graph['name']}: #{this_graph['name']}_#{_name} _bar now: #{_bar.length} deep"
+                        _entity_hash = Hash.new
+                        #warn "SNMPGraph: #{this_graph['name']}_#{_name}: display_value_in_legend: #{_display_value_in_legend}"
+                        if _display_value_in_legend == true
+                          case _legend_value_format
+                          when 'default'
+                            _legend_value = _pre_invert_data
+                          when 'total'
+                            _legend_value = _rawdata
+                          else
+                            warn "SNMPGraph: #{this_graph['name']}: #{this_graph['name']}_#{_name} Unsupported value for legend_value_format. Got '#{_legend_value_format}'. Falling back to default."
+                            _legend_value = _pre_invert_data
+                          end
+                          _entity_hash['target'] = "#{_name}: #{_legend_value}"
+                        else
+                          _entity_hash['target'] = "#{_name}"
+                        end
+                        _entity_hash['datapoints'] = _foo
+                        #TODO: Implement me
+                        #_entity_hash['renderer'] = _renderer
+                        job_graphite << _entity_hash
+                        if @snmpgraph_history_enable
+                          #warn "SNMPGraph: History enabled. appending to #{this_graph['name']}_#{_name}_datapoints object"
+                          snmpGraph_history["#{this_graph['name']}_#{_name}_datapoints"] << job_now
+                        end
                       end
-                      _entity_hash['datapoints'] = _foo
-                      #TODO: Implement me
-                      #_entity_hash['renderer'] = _renderer
-                      job_graphite << _entity_hash
-                      if @snmpgraph_history_enable
-                        #warn "SNMPGraph: History enabled. appending to #{this_graph['name']}_#{_name}_datapoints object"
-                        snmpGraph_history["#{this_graph['name']}_#{_name}_datapoints"] << job_now
-                      end
-                    end
-                  end#polled entity for this job
+                    end#polled entity for this job
+                  end#manager rescue
                   manager.close
                   #warn "SNMPGraph: Sending Event:  #{this_graph['name']} min: #{_floor} ( #{lowest} * #{_num_invert}) "
                   if @snmpgraph_bgcolor_enable
