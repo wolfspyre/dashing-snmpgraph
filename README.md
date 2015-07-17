@@ -1,6 +1,9 @@
 #Dashing-SnmpGraph
 
 This aims to be a [Dashing](http://shopify.github.io/dashing/#overview) widget, with a job and sample dashboard for visualizing SNMP data from your devices
+[![Sample one](https://www.evernote.com/l/AP8hZrbB5XFFY7iLVPcklnifHauFrRQ16xIB/image.png)](https://www.evernote.com/shard/s255/sh/2166b6c1-e571-4563-b88b-54f72496789f/1dab85ad1435eb12/res/519f6843-d9c1-467c-a546-d070877d76de/skitch.png)
+
+[![Sample Two](https://www.evernote.com/l/AP9AktBic9hDxY8BBzQpNeUsh6YwJTBvMI0B/image.png?width=200)](https://www.evernote.com/shard/s255/sh/4092d062-73d8-43c5-8f01-07342935e52c/87a63025306f308d/res/cb00ae66-a07b-4e8c-a972-da9eae99e6ce/skitch.png)
 
 ##Installation
 
